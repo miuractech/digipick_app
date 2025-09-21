@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../theme/app_theme.dart';
+import '../theme/app_components.dart';
 import 'edit_profile_screen.dart';
 import 'info_pages.dart';
 
@@ -13,7 +15,7 @@ class ProfilePage extends StatelessWidget {
     final user = authProvider.user;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: AppColors.backgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -21,13 +23,9 @@ class ProfilePage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Profile',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
+                style: AppTextStyles.h1,
               ),
               const SizedBox(height: 32),
               Center(
@@ -35,57 +33,38 @@ class ProfilePage extends StatelessWidget {
                   constraints: const BoxConstraints(maxWidth: 400),
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    color: AppColors.cardBackground,
+                    borderRadius: AppBorderRadius.card,
+                    boxShadow: AppShadows.card,
                   ),
                   child: Column(
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundColor: Colors.grey[100],
-                        child: const Icon(
+                        backgroundColor: AppColors.backgroundColor,
+                        child: Icon(
                           Icons.person,
                           size: 50,
-                          color: Colors.black,
+                          color: AppColors.primaryText,
                         ),
                       ),
                       const SizedBox(height: 16),
                       if (user?.email != null)
                         Text(
                           user!.email!,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black,
-                          ),
+                          style: AppTextStyles.h3,
                         ),
                       const SizedBox(height: 8),
                       Text(
                         'IMAGEPICK User',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
+                        style: AppTextStyles.bodyMedium,
                       ),
                       const SizedBox(height: 16),
-                      ElevatedButton(
+                      AppComponents.primaryButton(
+                        text: 'Edit Profile',
                         onPressed: () => _navigateToEditProfile(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text('Edit Profile'),
+                        width: null,
+                        padding: const EdgeInsets.symmetric(horizontal: AppSizes.xl, vertical: AppSizes.md),
                       ),
                     ],
                   ),
@@ -135,22 +114,21 @@ class ProfilePage extends StatelessWidget {
                     Container(
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.errorColor,
+                        borderRadius: AppBorderRadius.button,
                       ),
                       child: TextButton.icon(
                         onPressed: () => _showSignOutDialog(context, authProvider),
                         icon: const Icon(Icons.logout, color: Colors.white),
-                        label: const Text(
+                        label: Text(
                           'Sign Out',
-                          style: TextStyle(
+                          style: AppTextStyles.bodyLarge.copyWith(
                             color: Colors.white,
-                            fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          padding: const EdgeInsets.symmetric(vertical: AppSizes.lg),
                         ),
                       ),
                     ),
@@ -171,18 +149,12 @@ class ProfilePage extends StatelessWidget {
     VoidCallback onTap,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: AppSizes.md),
+      padding: const EdgeInsets.all(AppSizes.lg),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppColors.cardBackground,
+        borderRadius: AppBorderRadius.card,
+        boxShadow: AppShadows.card,
       ),
       child: InkWell(
         onTap: onTap,
@@ -191,22 +163,20 @@ class ProfilePage extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
             children: [
-              Icon(icon, color: Colors.black, size: 24),
-              const SizedBox(width: 16),
+              Icon(icon, color: AppColors.primaryText, size: AppSizes.iconLarge),
+              const SizedBox(width: AppSizes.lg),
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: AppTextStyles.bodyLarge.copyWith(
                     fontWeight: FontWeight.w500,
-                    color: Colors.black,
                   ),
                 ),
               ),
               Icon(
                 Icons.arrow_forward_ios, 
-                size: 16, 
-                color: Colors.grey[400],
+                size: AppSizes.iconSmall, 
+                color: AppColors.tertiaryText,
               ),
             ],
           ),

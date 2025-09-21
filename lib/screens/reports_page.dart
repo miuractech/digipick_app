@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../models/device_test.dart';
 import '../services/auth_service.dart';
 import '../providers/auth_provider.dart';
+import '../theme/app_theme.dart';
+import '../theme/app_components.dart';
 import 'report_detail_screen.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 
@@ -127,27 +129,24 @@ class _ReportsPageState extends State<ReportsPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Device Test Reports',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
+              Text(
+                'Device Test Reports',
+                style: AppTextStyles.h1,
+              ),
                 Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.filter_list, color: Colors.black),
-                      tooltip: 'Filter',
-                      onPressed: _showFilterModal,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.refresh, color: Colors.black),
-                      tooltip: 'Refresh',
-                      onPressed: () async {
-                        await _loadReports(reset: true);
-                      },
-                    ),
+                  AppComponents.iconButton(
+                    icon: Icons.filter_list,
+                    onPressed: _showFilterModal,
+                    iconColor: AppColors.primaryText,
+                  ),
+                  AppComponents.iconButton(
+                    icon: Icons.refresh,
+                    onPressed: () async {
+                      await _loadReports(reset: true);
+                    },
+                    iconColor: AppColors.primaryText,
+                  ),
                   ],
                 ),
               ],
@@ -196,17 +195,14 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Widget _buildReportsList() {
-    final theme = Theme.of(context);
     if (_reports.isEmpty && _isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return AppComponents.loadingIndicator();
     }
 
     if (_reports.isEmpty && !_isLoading) {
-      return Center(
-        child: Text(
-          'No reports found',
-          style: theme.textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
-        ),
+      return AppComponents.emptyState(
+        icon: Icons.assessment_outlined,
+        title: 'No reports found',
       );
     }
 
@@ -215,9 +211,9 @@ class _ReportsPageState extends State<ReportsPage> {
       itemCount: _reports.length + (_hasMore ? 1 : 0),
       itemBuilder: (context, index) {
         if (index >= _reports.length) {
-          return const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Center(child: CircularProgressIndicator()),
+          return Padding(
+            padding: const EdgeInsets.all(AppSizes.lg),
+            child: AppComponents.loadingIndicator(),
           );
         }
 
@@ -228,33 +224,26 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Widget _buildReportCard(DeviceTest report) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     Color statusColor;
     switch (report.testStatus) {
       case 'passed':
-        statusColor = Colors.green;
+        statusColor = AppColors.successColor;
         break;
       case 'failed':
-        statusColor = Colors.red;
+        statusColor = AppColors.errorColor;
         break;
       case 'pending':
-        statusColor = Colors.orange;
+        statusColor = AppColors.warningColor;
         break;
       case 'incomplete':
-        statusColor = Colors.grey;
+        statusColor = AppColors.tertiaryAccent;
         break;
       default:
-        statusColor = Colors.grey;
+        statusColor = AppColors.tertiaryAccent;
     }
 
-    return Card(
-      color: colorScheme.surface,
-      margin: const EdgeInsets.only(bottom: 12.0),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+    return AppComponents.card(
+      margin: const EdgeInsets.only(bottom: AppSizes.md),
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -264,9 +253,9 @@ class _ReportsPageState extends State<ReportsPage> {
             ),
           );
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppBorderRadius.card,
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(AppSizes.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -276,24 +265,21 @@ class _ReportsPageState extends State<ReportsPage> {
                   Expanded(
                     child: Text(
                       report.folderName,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
+                    style: AppTextStyles.h3,
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: AppBorderRadius.chip,
+                  ),
                     child: Text(
                       report.testStatus?.toUpperCase() ?? 'UNKNOWN',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: statusColor,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    style: AppTextStyles.caption.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                    ),
                     ),
                   ),
                 ],
@@ -302,22 +288,22 @@ class _ReportsPageState extends State<ReportsPage> {
               if (report.deviceName != null)
                 Text(
                   'Device: ${report.deviceName}',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
+                  style: AppTextStyles.bodyMedium,
                 ),
               if (report.testDate != null)
                 Text(
                   'Test Date: ${report.testDate!.day}/${report.testDate!.month}/${report.testDate!.year}',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
+                  style: AppTextStyles.bodyMedium,
                 ),
               if (report.images.isNotEmpty)
                 Text(
                   'Images: ${report.images.length}',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
+                  style: AppTextStyles.bodyMedium,
                 ),
               if (report.uploadBatch != null)
                 Text(
                   'Batch: ${report.uploadBatch}',
-                  style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
+                  style: AppTextStyles.bodySmall,
                 ),
             ],
           ),
@@ -368,9 +354,8 @@ class _FilterModalState extends State<FilterModal> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Material(
-      color: theme.colorScheme.background,
+      color: AppColors.cardBackground,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -384,26 +369,26 @@ class _FilterModalState extends State<FilterModal> {
                   width: 40,
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+                decoration: BoxDecoration(
+                  color: AppColors.dividerColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
                 ),
               ),
-              Text('Filters', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+              Text('Filters', style: AppTextStyles.h2),
               const SizedBox(height: 24),
               DropdownButtonFormField<String>(
                 value: _selectedDeviceId,
                 decoration: InputDecoration(
                   labelText: 'Device',
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
+                    borderRadius: AppBorderRadius.input,
+                    borderSide: BorderSide(color: AppColors.dividerColor),
                   ),
                   isDense: true,
-                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  labelStyle: AppTextStyles.bodyMedium,
                   filled: true,
-                  fillColor: theme.colorScheme.surface,
+                  fillColor: AppColors.cardBackground,
                 ),
                 items: [
                   const DropdownMenuItem<String>(
@@ -427,13 +412,13 @@ class _FilterModalState extends State<FilterModal> {
                 decoration: InputDecoration(
                   labelText: 'Status',
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
+                    borderRadius: AppBorderRadius.input,
+                    borderSide: BorderSide(color: AppColors.dividerColor),
                   ),
                   isDense: true,
-                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  labelStyle: AppTextStyles.bodyMedium,
                   filled: true,
-                  fillColor: theme.colorScheme.surface,
+                  fillColor: AppColors.cardBackground,
                 ),
                 items: const [
                   DropdownMenuItem<String>(
@@ -464,7 +449,7 @@ class _FilterModalState extends State<FilterModal> {
                 },
               ),
               const SizedBox(height: 16),
-              Text('Date Range', style: theme.textTheme.bodyLarge),
+              Text('Date Range', style: AppTextStyles.bodyLarge),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: () async {
@@ -483,20 +468,20 @@ class _FilterModalState extends State<FilterModal> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(12),
+                    color: AppColors.cardBackground,
+                    border: Border.all(color: AppColors.dividerColor),
+                    borderRadius: AppBorderRadius.input,
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.calendar_today, color: Colors.grey[600]),
+                      Icon(Icons.calendar_today, color: AppColors.tertiaryText),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           _dateRange == null
                               ? 'Select date range'
                               : '${_dateRange!.start.day}/${_dateRange!.start.month}/${_dateRange!.start.year} - ${_dateRange!.end.day}/${_dateRange!.end.month}/${_dateRange!.end.year}',
-                          style: theme.textTheme.bodyMedium?.copyWith(color: Colors.black),
+                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primaryText),
                         ),
                       ),
                     ],
@@ -517,11 +502,11 @@ class _FilterModalState extends State<FilterModal> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
+                        backgroundColor: AppColors.primaryAccent,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: AppSizes.lg),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: AppBorderRadius.button,
                         ),
                       ),
                       child: const Text('Apply Filters', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -532,10 +517,10 @@ class _FilterModalState extends State<FilterModal> {
                     child: TextButton(
                       onPressed: widget.onClear,
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        foregroundColor: AppColors.primaryText,
+                        padding: const EdgeInsets.symmetric(vertical: AppSizes.lg),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: AppBorderRadius.button,
                         ),
                       ),
                       child: const Text('Clear', style: TextStyle(fontWeight: FontWeight.w600)),

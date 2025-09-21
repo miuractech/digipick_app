@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../theme/app_components.dart';
 
 class UnauthorizedScreen extends StatelessWidget {
   const UnauthorizedScreen({super.key});
@@ -6,7 +8,7 @@ class UnauthorizedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppColors.backgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -16,54 +18,49 @@ class UnauthorizedScreen extends StatelessWidget {
               Icon(
                 Icons.block,
                 size: 120,
-                color: Colors.red[300],
+                color: AppColors.errorColor,
               ),
               const SizedBox(height: 32),
               Text(
                 'Access Denied',
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red[600],
+                style: AppTextStyles.h1.copyWith(
+                  color: AppColors.errorColor,
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               Text(
                 'Your email address is not registered with any organization.',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.grey[700],
-                ),
+                style: AppTextStyles.bodyLarge,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(AppSizes.xl),
                 decoration: BoxDecoration(
-                  color: Colors.orange[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.orange[200]!),
+                  color: AppColors.pendingBackground,
+                  borderRadius: AppBorderRadius.button,
+                  border: Border.all(color: AppColors.pendingText),
                 ),
                 child: Column(
                   children: [
                     Icon(
                       Icons.info_outline,
-                      color: Colors.orange[600],
-                      size: 32,
+                      color: AppColors.pendingText,
+                      size: AppSizes.iconXLarge,
                     ),
                     const SizedBox(height: 12),
                     Text(
                       'Need Access?',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange[800],
+                      style: AppTextStyles.h3.copyWith(
+                        color: AppColors.pendingText,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Please contact Paramount Instruments to register your organization and get access to this application.',
-                      style: TextStyle(
-                        color: Colors.orange[700],
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.pendingText,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -84,11 +81,11 @@ class UnauthorizedScreen extends StatelessWidget {
                       icon: const Icon(Icons.arrow_back),
                       label: const Text('Back to Login'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[600],
+                        backgroundColor: AppColors.tertiaryText,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: AppSizes.lg),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: AppBorderRadius.button,
                         ),
                       ),
                     ),
@@ -98,20 +95,19 @@ class UnauthorizedScreen extends StatelessWidget {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         // TODO: Add contact functionality
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Contact feature coming soon!'),
-                          ),
+                        AppComponents.showInfoSnackbar(
+                          context,
+                          'Contact feature coming soon!'
                         );
                       },
                       icon: const Icon(Icons.contact_support),
                       label: const Text('Contact Us'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
+                        backgroundColor: AppColors.primaryAccent,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: AppSizes.lg),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: AppBorderRadius.button,
                         ),
                       ),
                     ),

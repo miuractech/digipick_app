@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../theme/app_theme.dart';
+import '../theme/app_components.dart';
 
 class CompanyDetails {
   String? name;
@@ -127,21 +129,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
     }
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF8F9FA),
+        backgroundColor: AppColors.backgroundColor,
         elevation: 0,
-        leading: IconButton(
+        leading: AppComponents.iconButton(
+          icon: Icons.arrow_back,
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          iconColor: AppColors.primaryText,
         ),
-        title: const Text(
+        title: Text(
           'Edit Profile',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.black,
-          ),
+          style: AppTextStyles.h2,
         ),
       ),
       body: SafeArea(
@@ -189,14 +188,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
+                color: AppColors.cardBackground,
+                boxShadow: AppShadows.card,
               ),
               child: SafeArea(
                 top: false,
@@ -205,19 +198,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   child: ElevatedButton(
                     onPressed: _saveProfile,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: AppColors.primaryAccent,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: AppSizes.lg),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: AppBorderRadius.button,
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Save Profile',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: AppTextStyles.buttonText,
                     ),
                   ),
                 ),
@@ -231,28 +221,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Widget _buildSection(String title, List<Widget> fields) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSizes.xl),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppColors.cardBackground,
+        borderRadius: AppBorderRadius.card,
+        boxShadow: AppShadows.card,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
+            style: AppTextStyles.h3,
           ),
           const SizedBox(height: 20),
           ...fields.map((field) => Padding(
@@ -271,25 +251,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(
-          color: Colors.grey[600],
-          fontSize: 14,
-        ),
+        labelStyle: AppTextStyles.bodyMedium,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderRadius: AppBorderRadius.input,
+          borderSide: BorderSide(color: AppColors.dividerColor),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderRadius: AppBorderRadius.input,
+          borderSide: BorderSide(color: AppColors.dividerColor),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.black),
+          borderRadius: AppBorderRadius.input,
+          borderSide: BorderSide(color: AppColors.primaryAccent),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.lg),
         filled: true,
-        fillColor: Colors.grey[50],
+        fillColor: AppColors.backgroundColor,
       ),
     );
   }
@@ -300,15 +277,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       // This would typically involve calling an API or database service
       
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Profile updated successfully!'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
+      AppComponents.showSuccessSnackbar(
+        context, 
+        'Profile updated successfully!'
       );
     }
   }

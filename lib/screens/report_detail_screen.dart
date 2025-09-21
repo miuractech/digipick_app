@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/device_test.dart';
+import '../theme/app_theme.dart';
+import '../theme/app_components.dart';
 
 class ReportDetailScreen extends StatelessWidget {
   final DeviceTest report;
@@ -9,13 +11,14 @@ class ReportDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.cardBackground,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+        leading: AppComponents.iconButton(
+          icon: Icons.arrow_back,
           onPressed: () => Navigator.pop(context),
+          iconColor: AppColors.primaryText,
         ),
         actions: [
           Container(
@@ -27,10 +30,10 @@ class ReportDetailScreen extends StatelessWidget {
               icon: const Icon(Icons.download, size: 20),
               label: const Text('Download'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF5B67CA),
+                backgroundColor: AppColors.primaryAccent,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: AppBorderRadius.button,
                 ),
               ),
             ),
@@ -62,11 +65,7 @@ class ReportDetailScreen extends StatelessWidget {
   Widget _buildHeader() {
     return Text(
       'Report ${report.testDate != null ? "${report.testDate!.day.toString().padLeft(2, '0')}/${report.testDate!.month.toString().padLeft(2, '0')}/${report.testDate!.year.toString().substring(2)}" : ""} - ${report.id.substring(0, 3).toUpperCase()}',
-      style: const TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-        color: Colors.black,
-      ),
+      style: AppTextStyles.h1,
     );
   }
 
@@ -128,13 +127,9 @@ class ReportDetailScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Sample Images',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
+          style: AppTextStyles.h2,
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -149,11 +144,11 @@ class ReportDetailScreen extends StatelessWidget {
                 margin: const EdgeInsets.only(right: 12),
                 decoration: BoxDecoration(
                   color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: AppBorderRadius.button,
                 ),
                 child: imageUrls.length > index && imageUrls[index].startsWith('http')
                     ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: AppBorderRadius.button,
                         child: Image.network(
                           imageUrls[index],
                           fit: BoxFit.cover,
@@ -186,21 +181,17 @@ class ReportDetailScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Sample Readings - 1',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
+          style: AppTextStyles.h2,
         ),
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.cardBackground,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[200]!),
+            border: Border.all(color: AppColors.dividerColor),
           ),
           child: Column(
             children: [
@@ -260,9 +251,9 @@ class ReportDetailScreen extends StatelessWidget {
         const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.cardBackground,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[200]!),
+            border: Border.all(color: AppColors.dividerColor),
           ),
           child: Table(
             border: TableBorder.all(color: Colors.grey[200]!),
@@ -349,9 +340,9 @@ class ReportDetailScreen extends StatelessWidget {
         const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.cardBackground,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[200]!),
+            border: Border.all(color: AppColors.dividerColor),
           ),
           child: Table(
             border: TableBorder.all(color: Colors.grey[200]!),

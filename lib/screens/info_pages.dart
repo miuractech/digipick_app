@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../theme/app_components.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -8,14 +10,12 @@ class WelcomeScreen extends StatelessWidget {
     return _InfoPageScaffold(
       title: 'Welcome to Imagepick',
       icon: Icons.waving_hand,
-      child: const Text(
+      child:         Text(
         'Welcome to Imagepick - your comprehensive image processing solution.\n\n'
         'We\'re excited to have you on board and look forward to helping you achieve your imaging goals.\n\n'
         'Our platform provides powerful tools for image management, processing, and analysis that will streamline your workflow and enhance your productivity.',
-        style: TextStyle(
-          fontSize: 16,
+        style: AppTextStyles.bodyLarge.copyWith(
           height: 1.6,
-          color: Colors.black87,
         ),
       ),
     );
@@ -30,7 +30,7 @@ class AboutParamountScreen extends StatelessWidget {
     return _InfoPageScaffold(
       title: 'About Paramount',
       icon: Icons.info,
-      child: const Text(
+      child: Text(
         'Paramount is a leading technology company focused on innovative imaging solutions.\n\n'
         'Founded with the vision to revolutionize image processing and management, we continue to push the boundaries of what\'s possible in digital imaging.\n\n'
         'Our Mission:\n'
@@ -38,10 +38,8 @@ class AboutParamountScreen extends StatelessWidget {
         '• Provide exceptional user experiences\n'
         '• Drive innovation in digital solutions\n\n'
         'With years of expertise and a commitment to excellence, Paramount remains at the forefront of technological advancement.',
-        style: TextStyle(
-          fontSize: 16,
+        style: AppTextStyles.bodyLarge.copyWith(
           height: 1.6,
-          color: Colors.black87,
         ),
       ),
     );
@@ -59,12 +57,10 @@ class VisitSiteScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Visit our official website to discover more about our products, services, and latest innovations in imaging technology.',
-            style: TextStyle(
-              fontSize: 16,
+            style: AppTextStyles.bodyLarge.copyWith(
               height: 1.6,
-              color: Colors.black87,
             ),
           ),
           const SizedBox(height: 24),
@@ -84,24 +80,22 @@ class VisitSiteScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black,
+                    color: AppColors.primaryText,
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Explore our:\n'
             '• Product catalog and specifications\n'
             '• Technical documentation\n'
             '• Customer support resources\n'
             '• Latest news and updates\n'
             '• Career opportunities',
-            style: TextStyle(
-              fontSize: 16,
+            style: AppTextStyles.bodyLarge.copyWith(
               height: 1.6,
-              color: Colors.black87,
             ),
           ),
         ],
@@ -118,7 +112,7 @@ class TermsConditionsScreen extends StatelessWidget {
     return _InfoPageScaffold(
       title: 'Terms & Conditions',
       icon: Icons.description,
-      child: const SingleChildScrollView(
+      child: SingleChildScrollView(
         child: Text(
           'Terms of Service\n\n'
           '1. Acceptance of Terms\n'
@@ -141,10 +135,8 @@ class TermsConditionsScreen extends StatelessWidget {
           'Email: support@paramount.com\n'
           'Phone: +1 (555) 123-4567\n\n'
           'Last updated: January 2024',
-          style: TextStyle(
-            fontSize: 16,
+          style: AppTextStyles.bodyLarge.copyWith(
             height: 1.6,
-            color: Colors.black87,
           ),
         ),
       ),
@@ -160,7 +152,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
     return _InfoPageScaffold(
       title: 'Privacy Policy',
       icon: Icons.privacy_tip,
-      child: const SingleChildScrollView(
+      child: SingleChildScrollView(
         child: Text(
           'Privacy Policy\n\n'
           '1. Information We Collect\n'
@@ -197,10 +189,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
           'Email: privacy@paramount.com\n'
           'Address: 123 Technology Drive, Innovation City, IC 12345\n\n'
           'Last updated: January 2024',
-          style: TextStyle(
-            fontSize: 16,
+          style: AppTextStyles.bodyLarge.copyWith(
             height: 1.6,
-            color: Colors.black87,
           ),
         ),
       ),
@@ -228,15 +218,13 @@ class UpgradeFirmwareScreen extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.green[600], size: 24),
+                Icon(Icons.check_circle, color: AppColors.completedText, size: AppSizes.iconLarge),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Your firmware is up to date!',
-                    style: TextStyle(
-                      fontSize: 16,
+                    style: AppTextStyles.bodyLarge.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
                     ),
                   ),
                 ),
@@ -248,7 +236,7 @@ class UpgradeFirmwareScreen extends StatelessWidget {
           const SizedBox(height: 16),
           _buildInfoRow('Latest Version', 'v2.1.3'),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Firmware Updates\n\n'
             'Regular firmware updates ensure optimal performance and introduce new features. Benefits include:\n\n'
             '• Enhanced security and stability\n'
@@ -256,10 +244,8 @@ class UpgradeFirmwareScreen extends StatelessWidget {
             '• New feature additions\n'
             '• Bug fixes and optimizations\n\n'
             'We recommend checking for updates regularly to ensure you have the latest improvements.',
-            style: TextStyle(
-              fontSize: 16,
+            style: AppTextStyles.bodyLarge.copyWith(
               height: 1.6,
-              color: Colors.black87,
             ),
           ),
           const SizedBox(height: 32),
@@ -347,38 +333,29 @@ class _InfoPageScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF8F9FA),
+        backgroundColor: AppColors.backgroundColor,
         elevation: 0,
-        leading: IconButton(
+        leading: AppComponents.iconButton(
+          icon: Icons.arrow_back,
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          iconColor: AppColors.primaryText,
         ),
         title: Text(
           title,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.black,
-          ),
+          style: AppTextStyles.h2,
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(AppSizes.xl),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: AppColors.cardBackground,
+              borderRadius: AppBorderRadius.card,
+              boxShadow: AppShadows.card,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -388,20 +365,16 @@ class _InfoPageScaffold extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.backgroundColor,
+                        borderRadius: AppBorderRadius.button,
                       ),
-                      child: Icon(icon, size: 24, color: Colors.black),
+                      child: Icon(icon, size: AppSizes.iconLarge, color: AppColors.primaryText),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Text(
                         title,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                        ),
+                        style: AppTextStyles.h2,
                       ),
                     ),
                   ],

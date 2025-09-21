@@ -5,6 +5,7 @@ import 'providers/auth_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/unauthorized_screen.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,30 +40,7 @@ class MyApp extends StatelessWidget {
           create: (context) => AuthProvider(),
           child: MaterialApp(
             title: 'IMAGEPICK',
-            theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.black,
-                brightness: Brightness.light,
-              ),
-              useMaterial3: true,
-              scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-              appBarTheme: const AppBarTheme(
-                backgroundColor: Color(0xFFF8F9FA),
-                elevation: 0,
-                titleTextStyle: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
-              ),
-              cardTheme: const CardThemeData(
-                color: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(20)),
-                ),
-              ),
-            ),
+            theme: AppTheme.lightTheme,
             home: const AuthWrapper(),
             routes: {
               '/login': (context) => const LoginScreen(),
@@ -92,20 +70,17 @@ class AuthWrapper extends StatelessWidget {
         // Show loading screen during initial load or auth operations
         if (authProvider.isLoading) {
           return Scaffold(
-            backgroundColor: Colors.grey[50],
-            body: const Center(
+            backgroundColor: AppColors.backgroundColor,
+            body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(
-                    color: Colors.deepPurple,
-                  ),
-                  SizedBox(height: 16),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: AppSizes.lg),
                   Text(
                     'Loading...',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 16,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.tertiaryText,
                     ),
                   ),
                 ],

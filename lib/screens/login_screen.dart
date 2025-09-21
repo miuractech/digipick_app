@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../theme/app_theme.dart';
+import '../theme/app_components.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 
@@ -33,9 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (error != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error), backgroundColor: Colors.red),
-      );
+      AppComponents.showErrorSnackbar(context, error);
     } else if (mounted) {
       // Navigate to home screen after successful sign in
       Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
@@ -45,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppColors.backgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -58,38 +58,26 @@ class _LoginScreenState extends State<LoginScreen> {
                 Icon(
                   Icons.lock_outline,
                   size: 80,
-                  color: Colors.deepPurple[300],
+                  color: AppColors.primaryAccent,
                 ),
                 const SizedBox(height: 24),
                 Text(
                   'Welcome Back',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
+                  style: AppTextStyles.h1,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Sign in to your account',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+                  style: AppTextStyles.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 48),
-                TextFormField(
+                AppComponents.inputField(
                   controller: _emailController,
+                  labelText: 'Email',
                   keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: const Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
+                  prefixIcon: Icons.email_outlined,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
@@ -101,18 +89,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
+                AppComponents.inputField(
                   controller: _passwordController,
+                  labelText: 'Password',
+                  prefixIcon: Icons.lock_outlined,
                   obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';
@@ -126,44 +107,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 24),
                 Consumer<AuthProvider>(
                   builder: (context, authProvider, child) {
-                    return ElevatedButton(
+                    return AppComponents.primaryButton(
+                      text: 'Sign In',
                       onPressed: authProvider.isLoading ? null : _signIn,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: authProvider.isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : const Text(
-                              'Sign In',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
+                      isLoading: authProvider.isLoading,
                     );
                   },
                 ),
                 const SizedBox(height: 16),
-                TextButton(
+                AppComponents.textButton(
+                  text: 'Forgot Password?',
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
                     );
                   },
-                  child: Text(
-                    'Forgot Password?',
-                    style: TextStyle(color: Colors.deepPurple[600]),
-                  ),
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -171,22 +130,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     Text(
                       "Don't have an account? ",
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: AppTextStyles.bodyMedium,
                     ),
-                    TextButton(
+                    AppComponents.textButton(
+                      text: 'Sign Up',
                       onPressed: () {
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(builder: (context) => const SignUpScreen()),
                         );
                       },
-                      child: Text(
-                        'Sign Up',
-                        style: TextStyle(
-                          color: Colors.deepPurple[600],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
                     ),
                   ],
                 ),
