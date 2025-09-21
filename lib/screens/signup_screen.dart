@@ -44,6 +44,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
           backgroundColor: Colors.green,
         ),
       );
+      // Navigate to home screen after successful sign up
+      Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
     }
   }
 
