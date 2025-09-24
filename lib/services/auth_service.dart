@@ -127,7 +127,26 @@ class AuthService {
     try {
       var query = _supabase.from('device_test').select('*');
 
-      if (deviceId != null) {
+      // First filter by company devices if companyId is provided
+      if (companyId != null) {
+        final deviceIds = await _getDeviceIdsForCompany(companyId);
+        if (deviceIds.isEmpty) {
+          return []; // No devices for this company
+        }
+        
+        // If a specific deviceId is provided, use it; otherwise use all company devices
+        if (deviceId != null) {
+          if (deviceIds.contains(deviceId)) {
+            query = query.eq('device_id', deviceId);
+          } else {
+            return []; // Requested device doesn't belong to this company
+          }
+        } else {
+          // Filter to only include tests from company devices
+          query = query.inFilter('device_id', deviceIds);
+        }
+      } else if (deviceId != null) {
+        // If no company filter but specific device requested
         query = query.eq('device_id', deviceId);
       }
 
@@ -144,20 +163,10 @@ class AuthService {
       }
 
       final response = await query
-          .order('test_date', ascending: false)
+          .order('created_at', ascending: false)
           .range(offset, offset + limit - 1);
       
-      // Filter by company if needed (since we can't join in this version)
-      List<Map<String, dynamic>> filteredResponse = List<Map<String, dynamic>>.from(response);
-      
-      if (companyId != null) {
-        final deviceIds = await _getDeviceIdsForCompany(companyId);
-        filteredResponse = filteredResponse.where((test) => 
-          test['device_id'] != null && deviceIds.contains(test['device_id'])
-        ).toList();
-      }
-      
-      return filteredResponse;
+      return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       return [];
     }

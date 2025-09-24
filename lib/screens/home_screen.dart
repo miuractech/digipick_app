@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'homepage.dart';
-import 'reports_page.dart';
+import 'care_page.dart';
+import 'shop_page.dart';
 import 'profile_page.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,7 +17,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> _pages = [
     Homepage(),
-    const ReportsPage(),
+    const CarePage(),
+    const ShopPage(),
     const ProfilePage(),
   ];
 
@@ -29,27 +31,32 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
         type: BottomNavigationBarType.fixed,
-        backgroundColor: AppColors.primaryAccent,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
+        backgroundColor: AppColors.backgroundColor,
+        selectedItemColor: AppColors.secondaryAccent,
+        unselectedItemColor: AppColors.primaryAccent,
         elevation: 10,
         selectedFontSize: 12,
         unselectedFontSize: 12,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
+            icon: Icon(Icons.grid_view_outlined),
+            activeIcon: Icon(Icons.grid_view),
             label: 'Home',
           ),
+            BottomNavigationBarItem(
+              icon: ImageIcon(AssetImage('lib/assets/care.png')),
+              activeIcon: ImageIcon(AssetImage('lib/assets/care.png')),
+              label: 'Care',
+            ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.assessment_outlined),
-            activeIcon: Icon(Icons.assessment),
-            label: 'Reports',
+            icon: Icon(Icons.shopping_cart_outlined),
+            activeIcon: Icon(Icons.shopping_cart),
+            label: 'Shop',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
+            icon: Icon(Icons.menu),
+            activeIcon: Icon(Icons.menu),
+            label: 'Menu',
           ),
         ],
       ),

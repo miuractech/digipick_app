@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
+import 'screens/preloader_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/unauthorized_screen.dart';
@@ -41,11 +42,13 @@ class MyApp extends StatelessWidget {
           child: MaterialApp(
             title: 'IMAGEPICK',
             theme: AppTheme.lightTheme,
-            home: const AuthWrapper(),
+            home: const PreloaderScreen(),
             routes: {
+              '/preloader': (context) => const PreloaderScreen(),
               '/login': (context) => const LoginScreen(),
               '/home': (context) => const HomeScreen(),
               '/unauthorized': (context) => const UnauthorizedScreen(),
+              '/auth': (context) => const AuthWrapper(),
             },
             debugShowCheckedModeBanner: false,
           ),

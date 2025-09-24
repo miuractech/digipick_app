@@ -9,7 +9,9 @@ import 'report_detail_screen.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 
 class ReportsPage extends StatefulWidget {
-  const ReportsPage({super.key});
+  final String? deviceId;
+  
+  const ReportsPage({super.key, this.deviceId});
 
   @override
   State<ReportsPage> createState() => _ReportsPageState();
@@ -36,6 +38,10 @@ class _ReportsPageState extends State<ReportsPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // Set initial device filter if provided
+    if (widget.deviceId != null) {
+      _selectedDeviceId = widget.deviceId;
+    }
     _loadInitialData();
   }
 
@@ -84,14 +90,25 @@ class _ReportsPageState extends State<ReportsPage> {
     if (authProvider.organization == null) return;
 
     try {
+      // For default load (no filters), get last 10 reports initially
+      final isDefaultLoad = _selectedDeviceId == null && 
+                           _selectedStatus == null && 
+                           _startDate == null && 
+                           _endDate == null;
+      
+      final currentLimit = isDefaultLoad && _currentPage == 0 ? 10 : _pageSize;
+      final currentOffset = _currentPage == 0 && isDefaultLoad 
+          ? 0 
+          : (_currentPage == 0 ? 0 : (_currentPage - 1) * _pageSize + (isDefaultLoad ? 10 : 0));
+      
       final reportsData = await _authService.getDeviceTests(
         companyId: authProvider.organization!['id'],
         deviceId: _selectedDeviceId,
         status: _selectedStatus,
         startDate: _startDate,
         endDate: _endDate,
-        limit: _pageSize,
-        offset: _currentPage * _pageSize,
+        limit: currentLimit,
+        offset: currentOffset,
       );
 
       final newReports = reportsData.map((data) => DeviceTest.fromJson(data)).toList();
@@ -99,7 +116,7 @@ class _ReportsPageState extends State<ReportsPage> {
       setState(() {
         _reports.addAll(newReports);
         _currentPage++;
-        _hasMore = newReports.length == _pageSize;
+        _hasMore = newReports.length == currentLimit;
         _isLoading = false;
       });
     } catch (e) {
@@ -129,31 +146,45 @@ class _ReportsPageState extends State<ReportsPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-              Text(
-                'Device Test Reports',
-                style: AppTextStyles.h1,
-              ),
                 Row(
                   children: [
-                  AppComponents.iconButton(
-                    icon: Icons.filter_list,
-                    onPressed: _showFilterModal,
-                    iconColor: AppColors.primaryText,
-                  ),
-                  AppComponents.iconButton(
-                    icon: Icons.refresh,
-                    onPressed: () async {
-                      await _loadReports(reset: true);
-                    },
-                    iconColor: AppColors.primaryText,
-                  ),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Device Test Reports',
+                      style: AppTextStyles.h1,
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    AppComponents.iconButton(
+                      icon: Icons.filter_list,
+                      onPressed: _showFilterModal,
+                      iconColor: AppColors.primaryText,
+                    ),
+                    AppComponents.iconButton(
+                      icon: Icons.refresh,
+                      onPressed: () async {
+                        await _loadReports(reset: true);
+                      },
+                      iconColor: AppColors.primaryText,
+                    ),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Expanded(
-              child: _buildReportsList(),
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  await _loadReports(reset: true);
+                },
+                child: _buildReportsList(),
+              ),
             ),
           ],
         ),
@@ -200,9 +231,17 @@ class _ReportsPageState extends State<ReportsPage> {
     }
 
     if (_reports.isEmpty && !_isLoading) {
+      final hasFiltersApplied = _selectedDeviceId != null || 
+                                _selectedStatus != null || 
+                                _startDate != null || 
+                                _endDate != null;
+      
       return AppComponents.emptyState(
         icon: Icons.assessment_outlined,
-        title: 'No reports found',
+        title: hasFiltersApplied ? 'No reports found' : 'No reports available',
+        subtitle: hasFiltersApplied 
+            ? 'Try adjusting your filters to see more results'
+            : 'Reports will appear here once device tests are completed',
       );
     }
 
@@ -224,92 +263,137 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Widget _buildReportCard(DeviceTest report) {
-    Color statusColor;
-    switch (report.testStatus) {
-      case 'passed':
-        statusColor = AppColors.successColor;
-        break;
-      case 'failed':
-        statusColor = AppColors.errorColor;
-        break;
-      case 'pending':
-        statusColor = AppColors.warningColor;
-        break;
-      case 'incomplete':
-        statusColor = AppColors.tertiaryAccent;
-        break;
-      default:
-        statusColor = AppColors.tertiaryAccent;
-    }
-
-    return AppComponents.card(
+    return Container(
       margin: const EdgeInsets.only(bottom: AppSizes.md),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ReportDetailScreen(report: report),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.grey.shade300,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Row(
+          children: [
+            // Images icon from assets
+            Container(
+              width: 60,
+              height: 60,
+              child: Image.asset(
+                'lib/assets/images.png',
+                width: 60,
+                height: 60,
+                fit: BoxFit.contain,
+              ),
             ),
-          );
-        },
-        borderRadius: AppBorderRadius.card,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSizes.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            const SizedBox(width: 24),
+            // Report content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      report.folderName,
-                    style: AppTextStyles.h3,
+                  Text(
+                    'Report : ${report.folderName}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
-                    borderRadius: AppBorderRadius.chip,
-                  ),
-                    child: Text(
-                      report.testStatus?.toUpperCase() ?? 'UNKNOWN',
-                    style: AppTextStyles.caption.copyWith(
-                      color: statusColor,
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(height: 8),
+                  if (report.testDate != null)
+                    Text(
+                      'Date : ${report.testDate!.day} ${_getMonthName(report.testDate!.month)} ${report.testDate!.year}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.black54,
+                      ),
                     ),
-                    ),
+                  const SizedBox(height: 16),
+                  // Action buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ReportDetailScreen(report: report),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF245C9E),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'View',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            // TODO: Implement download functionality
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Download functionality will be implemented')),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4CAF50),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Download',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              if (report.deviceName != null)
-                Text(
-                  'Device: ${report.deviceName}',
-                  style: AppTextStyles.bodyMedium,
-                ),
-              if (report.testDate != null)
-                Text(
-                  'Test Date: ${report.testDate!.day}/${report.testDate!.month}/${report.testDate!.year}',
-                  style: AppTextStyles.bodyMedium,
-                ),
-              if (report.images.isNotEmpty)
-                Text(
-                  'Images: ${report.images.length}',
-                  style: AppTextStyles.bodyMedium,
-                ),
-              if (report.uploadBatch != null)
-                Text(
-                  'Batch: ${report.uploadBatch}',
-                  style: AppTextStyles.bodySmall,
-                ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      '', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[month];
   }
 }
 

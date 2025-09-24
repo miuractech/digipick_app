@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// App Theme Configuration
 /// 
@@ -158,24 +159,8 @@ class AppTheme {
         space: AppSizes.lg,
       ),
       
-      // Text Theme
-      textTheme: const TextTheme(
-        displayLarge: AppTextStyles.h1,
-        displayMedium: AppTextStyles.h2,
-        displaySmall: AppTextStyles.h3,
-        headlineLarge: AppTextStyles.h1,
-        headlineMedium: AppTextStyles.h2,
-        headlineSmall: AppTextStyles.h3,
-        titleLarge: AppTextStyles.h2,
-        titleMedium: AppTextStyles.h3,
-        titleSmall: AppTextStyles.bodyLarge,
-        bodyLarge: AppTextStyles.bodyLarge,
-        bodyMedium: AppTextStyles.bodyMedium,
-        bodySmall: AppTextStyles.bodySmall,
-        labelLarge: AppTextStyles.buttonText,
-        labelMedium: AppTextStyles.caption,
-        labelSmall: AppTextStyles.caption,
-      ),
+      // Text Theme with Poppins font
+      textTheme: GoogleFonts.poppinsTextTheme(),
       
       // Progress Indicator Theme
       progressIndicatorTheme: const ProgressIndicatorThemeData(
@@ -260,73 +245,73 @@ class AppColors {
 class AppTextStyles {
   AppTextStyles._();
 
-  // Headers
-  static const TextStyle h1 = TextStyle(
+  // Headers with Poppins font
+  static TextStyle h1 = GoogleFonts.poppins(
     fontSize: 24,
     fontWeight: FontWeight.w600,
     color: AppColors.primaryText,
     height: 1.2,
   );
 
-  static const TextStyle h2 = TextStyle(
+  static TextStyle h2 = GoogleFonts.poppins(
     fontSize: 20,
     fontWeight: FontWeight.w600,
     color: AppColors.primaryText,
     height: 1.2,
   );
 
-  static const TextStyle h3 = TextStyle(
+  static TextStyle h3 = GoogleFonts.poppins(
     fontSize: 18,
     fontWeight: FontWeight.w600,
     color: AppColors.primaryText,
     height: 1.2,
   );
 
-  // Body Text
-  static const TextStyle bodyLarge = TextStyle(
+  // Body Text with Poppins font
+  static TextStyle bodyLarge = GoogleFonts.poppins(
     fontSize: 16,
     fontWeight: FontWeight.w400,
     color: AppColors.primaryText,
     height: 1.4,
   );
 
-  static const TextStyle bodyMedium = TextStyle(
+  static TextStyle bodyMedium = GoogleFonts.poppins(
     fontSize: 14,
     fontWeight: FontWeight.w400,
     color: AppColors.secondaryText,
     height: 1.3,
   );
 
-  static const TextStyle bodySmall = TextStyle(
+  static TextStyle bodySmall = GoogleFonts.poppins(
     fontSize: 12,
     fontWeight: FontWeight.w400,
     color: AppColors.tertiaryText,
     height: 1.3,
   );
 
-  // Caption Text
-  static const TextStyle caption = TextStyle(
+  // Caption Text with Poppins font
+  static TextStyle caption = GoogleFonts.poppins(
     fontSize: 12,
     fontWeight: FontWeight.w500,
     color: AppColors.tertiaryText,
   );
 
-  // Button Text
-  static const TextStyle buttonText = TextStyle(
+  // Button Text with Poppins font
+  static TextStyle buttonText = GoogleFonts.poppins(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: Colors.white,
   );
 
-  // Special Text Styles
-  static const TextStyle link = TextStyle(
+  // Special Text Styles with Poppins font
+  static TextStyle link = GoogleFonts.poppins(
     fontSize: 14,
     fontWeight: FontWeight.w500,
     color: AppColors.secondaryAccent,
     decoration: TextDecoration.underline,
   );
 
-  static const TextStyle error = TextStyle(
+  static TextStyle error = GoogleFonts.poppins(
     fontSize: 12,
     fontWeight: FontWeight.w400,
     color: AppColors.errorColor,

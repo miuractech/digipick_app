@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../theme/app_theme.dart';
 import '../theme/app_components.dart';
+import '../theme/auth_components.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -41,70 +41,79 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: AppComponents.iconButton(
-          icon: Icons.arrow_back,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black54),
           onPressed: () => Navigator.pop(context),
-          iconColor: AppColors.tertiaryText,
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 40),
-                Icon(
-                  Icons.lock_reset_outlined,
-                  size: 80,
-                  color: AppColors.primaryAccent,
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // QCVATION Logo and tagline
+              AuthComponents.logoHeader(),
+              
+              // Page title
+              AuthComponents.pageTitle('Forgot Password'),
+              
+              // Description text
+              Text(
+                'We will send you an email with a link to reset your password, please enter the email associated with your account below.',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.black,
+                  height: 1.4,
                 ),
-                const SizedBox(height: 24),
-                Text(
-                  'Reset Password',
-                  style: AppTextStyles.h1,
-                  textAlign: TextAlign.center,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 40),
+              
+              // Form
+              Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Email input field
+                    AuthComponents.inputField(
+                      controller: _emailController,
+                      hintText: 'Email',
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your email';
+                        }
+                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                          return 'Please enter a valid email';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 40),
+                    
+                    // Send Password Reset Link button
+                    Consumer<AuthProvider>(
+                      builder: (context, authProvider, child) {
+                        return AuthComponents.primaryButton(
+                          text: 'Send Password Reset Link',
+                          onPressed: authProvider.isLoading ? null : _resetPassword,
+                          isLoading: authProvider.isLoading,
+                        );
+                      },
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Enter your email address and we\'ll send you a link to reset your password',
-                  style: AppTextStyles.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 48),
-                AppComponents.inputField(
-                  controller: _emailController,
-                  labelText: 'Email',
-                  keyboardType: TextInputType.emailAddress,
-                  prefixIcon: Icons.email_outlined,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                Consumer<AuthProvider>(
-                  builder: (context, authProvider, child) {
-                    return AppComponents.primaryButton(
-                      text: 'Send Reset Link',
-                      onPressed: authProvider.isLoading ? null : _resetPassword,
-                      isLoading: authProvider.isLoading,
-                    );
-                  },
-                ),
-              ],
-            ),
+              ),
+              
+              // Paramount footer
+              AuthComponents.paramountFooter(),
+            ],
           ),
         ),
       ),
