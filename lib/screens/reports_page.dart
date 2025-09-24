@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../models/device_test.dart';
 import '../services/auth_service.dart';
 import '../providers/auth_provider.dart';
@@ -146,18 +147,13 @@ class _ReportsPageState extends State<ReportsPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Device Test Reports',
-                      style: AppTextStyles.h1,
-                    ),
-                  ],
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                SvgPicture.asset(
+                  'lib/assets/logo.svg',
+                  height: 32,
                 ),
                 Row(
                   children: [
