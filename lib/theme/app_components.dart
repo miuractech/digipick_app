@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'app_theme.dart';
 
 /// App Components
@@ -235,6 +236,51 @@ class AppComponents {
     );
   }
 
+  /// Universal Header
+  /// 
+  /// Standard header with logo and optional back navigation and actions
+  static Widget universalHeader({
+    bool showBackButton = false,
+    VoidCallback? onBackPressed,
+    List<Widget>? actions,
+    EdgeInsets? padding,
+  }) {
+    return Padding(
+      padding: padding ?? const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          const SizedBox(height: 48),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Back button or spacer
+              if (showBackButton)
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: onBackPressed,
+                )
+              else
+                const SizedBox(width: 48), // Spacer to center logo
+              
+              // Logo
+              SvgPicture.asset(
+                'lib/assets/logo.svg',
+                height: 32,
+              ),
+              
+              // Actions or spacer
+              if (actions != null && actions.isNotEmpty)
+                Row(children: actions)
+              else
+                const SizedBox(width: 48), // Spacer to center logo
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
   /// Section Header
   /// 
   /// Consistent section header with optional action
@@ -431,6 +477,17 @@ class AppComponents {
         return AppColors.escalatedText;
     }
   }
+
+  /// Floating Action Button with Expandable Menu
+  static Widget floatingActionButton({
+    required VoidCallback onAddDevice,
+    required VoidCallback onServiceRequest,
+  }) {
+    return _FloatingActionButtonWidget(
+      onAddDevice: onAddDevice,
+      onServiceRequest: onServiceRequest,
+    );
+  }
 }
 
 /// Status Type Enum
@@ -439,4 +496,178 @@ enum StatusType {
   ongoing,
   completed,
   escalated,
+}
+
+/// Internal Floating Action Button Widget
+class _FloatingActionButtonWidget extends StatefulWidget {
+  final VoidCallback onAddDevice;
+  final VoidCallback onServiceRequest;
+
+  const _FloatingActionButtonWidget({
+    required this.onAddDevice,
+    required this.onServiceRequest,
+  });
+
+  @override
+  State<_FloatingActionButtonWidget> createState() => _FloatingActionButtonWidgetState();
+}
+
+class _FloatingActionButtonWidgetState extends State<_FloatingActionButtonWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _rotationAnimation;
+  late Animation<double> _scaleAnimation;
+  bool _isExpanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    
+    _rotationAnimation = Tween<double>(
+      begin: 0.0,
+      end: 0.25,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+    
+    _scaleAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.elasticOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _toggleExpanded() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+      if (_isExpanded) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.bottomRight,
+      children: [
+        // Backdrop to close menu when tapped
+        if (_isExpanded)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _toggleExpanded,
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.3),
+              ),
+            ),
+          ),
+        
+        // Action buttons
+        if (_isExpanded) ...[
+          // Add Device button
+          Positioned(
+            bottom: 140,
+            right: 16,
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              child: _buildActionButton(
+                icon: Icons.add_circle_outline,
+                label: 'Add Device',
+                backgroundColor: AppColors.primaryAccent,
+                onPressed: () {
+                  _toggleExpanded();
+                  widget.onAddDevice();
+                },
+              ),
+            ),
+          ),
+          
+          // Service Request button
+          Positioned(
+            bottom: 80,
+            right: 16,
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              child: _buildActionButton(
+                icon: Icons.build_outlined,
+                label: 'Service Request',
+                backgroundColor: AppColors.secondaryAccent,
+                onPressed: () {
+                  _toggleExpanded();
+                  widget.onServiceRequest();
+                },
+              ),
+            ),
+          ),
+        ],
+        
+        // Main FAB
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: AnimatedBuilder(
+            animation: _rotationAnimation,
+            builder: (context, child) {
+              return Transform.rotate(
+                angle: _rotationAnimation.value * 2 * 3.14159 ,
+                child: FloatingActionButton(
+                  onPressed: _toggleExpanded,
+                  backgroundColor: AppColors.primaryAccent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppBorderRadius.fab,
+                  ),
+                  child: Icon(
+                    _isExpanded ? Icons.close : Icons.add,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color backgroundColor,
+    required VoidCallback onPressed,
+  }) {
+    return Tooltip(
+      message: label,
+ 
+      child: FloatingActionButton(
+        heroTag: label,
+        onPressed: onPressed,
+        backgroundColor: backgroundColor,
+        mini: true,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppBorderRadius.fab,
+        ),
+        child: Icon(
+          icon,
+          color: Colors.white,
+          size: 20,
+        ),
+      ),
+    );
+  }
 }

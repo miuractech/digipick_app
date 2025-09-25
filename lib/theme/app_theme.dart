@@ -203,7 +203,7 @@ class AppColors {
   AppColors._();
 
   // Background Colors
-  static const Color backgroundColor = Color(0xFFF8F9FA);
+  static const Color backgroundColor = Colors.white;
   static const Color cardBackground = Colors.white;
 
   // Text Colors
@@ -345,6 +345,7 @@ class AppSizes {
   static const double radiusLarge = 20.0;
   static const double radiusXLarge = 25.0;
   static const double radiusRound = 56.0;
+  static const double radiusFAB = 48.0;
 }
 
 /// App Border Radius
@@ -353,11 +354,12 @@ class AppSizes {
 class AppBorderRadius {
   AppBorderRadius._();
 
-  static const BorderRadius card = BorderRadius.all(Radius.circular(AppSizes.radiusLarge));
-  static const BorderRadius button = BorderRadius.all(Radius.circular(AppSizes.radiusMedium));
-  static const BorderRadius chip = BorderRadius.all(Radius.circular(AppSizes.radiusXLarge));
-  static const BorderRadius input = BorderRadius.all(Radius.circular(AppSizes.radiusMedium));
+  static const BorderRadius card = BorderRadius.all(Radius.circular(AppSizes.radiusSmall));
+  static const BorderRadius button = BorderRadius.all(Radius.circular(AppSizes.radiusSmall));
+  static const BorderRadius chip = BorderRadius.all(Radius.circular(AppSizes.radiusSmall));
+  static const BorderRadius input = BorderRadius.all(Radius.circular(AppSizes.radiusSmall));
   static const BorderRadius round = BorderRadius.all(Radius.circular(AppSizes.radiusRound));
+  static const BorderRadius fab = BorderRadius.all(Radius.circular(AppSizes.radiusFAB));
 }
 
 /// App Shadows

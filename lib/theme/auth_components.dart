@@ -60,24 +60,26 @@ class AuthComponents {
     bool obscureText = false,
     TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
+    bool enabled = true,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: enabled ? Colors.grey[100] : Colors.grey[200],
         borderRadius: BorderRadius.circular(8),
       ),
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
         obscureText: obscureText,
+        enabled: enabled,
         style: GoogleFonts.poppins(
           fontSize: 16,
-          color: Colors.black87,
+          color: enabled ? Colors.black87 : Colors.grey[600],
         ),
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: GoogleFonts.poppins(
-            color: Colors.grey[500],
+            color: enabled ? Colors.grey[500] : Colors.grey[400],
             fontSize: 16,
           ),
           border: InputBorder.none,

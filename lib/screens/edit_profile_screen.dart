@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_components.dart';
@@ -47,26 +49,40 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
+  final ImagePicker _picker = ImagePicker();
+  
+  // User Profile Controllers (matching design)
+  TextEditingController? _firstNameController;
+  TextEditingController? _middleNameController;
+  TextEditingController? _lastNameController;
+  TextEditingController? _phoneController;
+  TextEditingController? _companyNameController;
+  TextEditingController? _designationController;
+  
+  // Company Details Controllers
   TextEditingController? _nameController;
   TextEditingController? _legalNameController;
   TextEditingController? _gstController;
   TextEditingController? _panController;
   TextEditingController? _cinController;
   TextEditingController? _emailController;
-  TextEditingController? _phoneController;
   TextEditingController? _addressLine1Controller;
   TextEditingController? _addressLine2Controller;
   TextEditingController? _cityController;
   TextEditingController? _stateController;
   TextEditingController? _postalCodeController;
   TextEditingController? _countryController;
+  
+  File? _profileImage;
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final org = mounted ? Provider.of<AuthProvider>(context, listen: false).organization : null;
+      final authProvider = mounted ? Provider.of<AuthProvider>(context, listen: false) : null;
+      final org = authProvider?.organization;
+      
       final details = org != null
           ? CompanyDetails(
               name: org['name'],
@@ -84,14 +100,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               country: org['country'],
             )
           : (widget.companyDetails ?? CompanyDetails());
+      
       setState(() {
+        // Initialize user profile fields
+        _firstNameController = TextEditingController(text: org?['contact_person']?.split(' ')[0] ?? 'John');
+        _middleNameController = TextEditingController(text: 'Middler');
+        _lastNameController = TextEditingController(text: org?['contact_person']?.split(' ').last ?? 'Doe');
+        _phoneController = TextEditingController(text: org?['phone'] ?? '9876543210');
+        _companyNameController = TextEditingController(text: org?['name'] ?? 'ABC Company');
+        _designationController = TextEditingController(text: 'CEO, MANAGER, Etc');
+        
+        // Initialize company details
         _nameController = TextEditingController(text: details.name);
         _legalNameController = TextEditingController(text: details.legalName);
         _gstController = TextEditingController(text: details.gstNumber);
         _panController = TextEditingController(text: details.panNumber);
         _cinController = TextEditingController(text: details.cinNumber);
         _emailController = TextEditingController(text: details.email);
-        _phoneController = TextEditingController(text: details.phone);
         _addressLine1Controller = TextEditingController(text: details.addressLine1);
         _addressLine2Controller = TextEditingController(text: details.addressLine2);
         _cityController = TextEditingController(text: details.city);
@@ -105,13 +130,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   void dispose() {
+    // User profile controllers
+    _firstNameController?.dispose();
+    _middleNameController?.dispose();
+    _lastNameController?.dispose();
+    _phoneController?.dispose();
+    _companyNameController?.dispose();
+    _designationController?.dispose();
+    
+    // Company details controllers
     _nameController?.dispose();
     _legalNameController?.dispose();
     _gstController?.dispose();
     _panController?.dispose();
     _cinController?.dispose();
     _emailController?.dispose();
-    _phoneController?.dispose();
     _addressLine1Controller?.dispose();
     _addressLine2Controller?.dispose();
     _cityController?.dispose();
@@ -130,157 +163,199 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      appBar: AppBar(
-        backgroundColor: AppColors.backgroundColor,
-        elevation: 0,
-        leading: AppComponents.iconButton(
-          icon: Icons.arrow_back,
-          onPressed: () => Navigator.pop(context),
-          iconColor: AppColors.primaryText,
-        ),
-        title: Text(
-          'Edit Profile',
-          style: AppTextStyles.h2,
-        ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      _buildSection('Company Information', [
-                        _buildTextField('Company Name', _nameController!),
-                        _buildTextField('Legal Name', _legalNameController!),
-                      ]),
-                      const SizedBox(height: 24),
-                      _buildSection('Tax Information', [
-                        _buildTextField('GST Number', _gstController!),
-                        _buildTextField('PAN Number', _panController!),
-                        _buildTextField('CIN Number', _cinController!),
-                      ]),
-                      const SizedBox(height: 24),
-                      _buildSection('Contact Information', [
-                        _buildTextField('Email', _emailController!, 
-                          keyboardType: TextInputType.emailAddress),
-                        _buildTextField('Phone', _phoneController!, 
-                          keyboardType: TextInputType.phone),
-                      ]),
-                      const SizedBox(height: 24),
-                      _buildSection('Address Information', [
-                        _buildTextField('Address Line 1', _addressLine1Controller!),
-                        _buildTextField('Address Line 2', _addressLine2Controller!),
-                        _buildTextField('City', _cityController!),
-                        _buildTextField('State', _stateController!),
-                        _buildTextField('Postal Code', _postalCodeController!),
-                        _buildTextField('Country', _countryController!),
-                      ]),
-                      const SizedBox(height: 32),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.cardBackground,
-                boxShadow: AppShadows.card,
-              ),
-              child: SafeArea(
-                top: false,
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _saveProfile,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryAccent,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: AppSizes.lg),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppBorderRadius.button,
-                      ),
-                    ),
-                    child: Text(
-                      'Save Profile',
-                      style: AppTextStyles.buttonText,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSection(String title, List<Widget> fields) {
-    return Container(
-      padding: const EdgeInsets.all(AppSizes.xl),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: AppBorderRadius.card,
-        boxShadow: AppShadows.card,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: Column(
         children: [
-          Text(
-            title,
-            style: AppTextStyles.h3,
+          AppComponents.universalHeader(
+            showBackButton: true,
+            onBackPressed: () => Navigator.pop(context),
           ),
-          const SizedBox(height: 20),
-          ...fields.map((field) => Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: field,
-          )).toList(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    'EDIT ACCOUNT PROFILE',
+                    style: AppTextStyles.h2.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  
+                  // Profile Picture Section
+                  _buildProfilePictureSection(),
+                  const SizedBox(height: 32),
+                  
+                  // User Profile Form
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        _buildTextField('First Name', _firstNameController!),
+                        const SizedBox(height: 16),
+                        _buildTextField('Middle Name', _middleNameController!),
+                        const SizedBox(height: 16),
+                        _buildTextField('Last Name', _lastNameController!),
+                        const SizedBox(height: 16),
+                        _buildTextField('Phone number', _phoneController!, 
+                          keyboardType: TextInputType.phone),
+                        const SizedBox(height: 16),
+                        _buildTextField('Company Name', _companyNameController!),
+                        const SizedBox(height: 16),
+                        _buildTextField('Designation', _designationController!),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, 
-      {TextInputType? keyboardType}) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: AppTextStyles.bodyMedium,
-        border: OutlineInputBorder(
-          borderRadius: AppBorderRadius.input,
-          borderSide: BorderSide(color: AppColors.dividerColor),
+  Widget _buildProfilePictureSection() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final organization = authProvider.organization;
+    
+    return Column(
+      children: [
+        // Profile Picture
+        Stack(
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(60),
+                border: Border.all(color: Colors.grey[300]!, width: 2),
+              ),
+              child: _profileImage != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(60),
+                      child: Image.file(
+                        _profileImage!,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryAccent,
+                        borderRadius: BorderRadius.circular(60),
+                      ),
+                      child: organization != null && organization['name'] != null
+                          ? Center(
+                              child: Text(
+                                organization['name']!.toString().substring(0, 1).toUpperCase(),
+                                style: AppTextStyles.h1.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 48,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )
+                          : Icon(
+                              Icons.person,
+                              size: 60,
+                              color: Colors.white,
+                            ),
+                    ),
+            ),
+          ],
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: AppBorderRadius.input,
-          borderSide: BorderSide(color: AppColors.dividerColor),
+        const SizedBox(height: 16),
+        // Upload Photo Button
+        TextButton.icon(
+          onPressed: _pickImage,
+          icon: Icon(
+            Icons.cloud_upload,
+            color: AppColors.primaryAccent,
+            size: 20,
+          ),
+          label: Text(
+            'Upload Photo',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.primaryAccent,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: AppBorderRadius.input,
-          borderSide: BorderSide(color: AppColors.primaryAccent),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.lg),
-        filled: true,
-        fillColor: AppColors.backgroundColor,
-      ),
+      ],
     );
   }
 
-  void _saveProfile() {
-    if (_formKey.currentState!.validate()) {
-      // TODO: Save to database (company_details table)
-      // This would typically involve calling an API or database service
+
+  Widget _buildTextField(String label, TextEditingController controller, 
+      {TextInputType? keyboardType}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.secondaryText,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            hintText: controller.text.isEmpty ? label : null,
+            hintStyle: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.tertiaryText,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: AppColors.dividerColor),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: AppColors.dividerColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: AppColors.primaryAccent, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            filled: true,
+            fillColor: Colors.white,
+          ),
+          style: AppTextStyles.bodyMedium,
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 80,
+      );
       
-      Navigator.pop(context);
-      AppComponents.showSuccessSnackbar(
+      if (image != null) {
+        setState(() {
+          _profileImage = File(image.path);
+        });
+      }
+    } catch (e) {
+      AppComponents.showErrorSnackbar(
         context, 
-        'Profile updated successfully!'
+        'Failed to pick image: $e'
       );
     }
   }
+
 }

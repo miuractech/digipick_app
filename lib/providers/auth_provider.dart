@@ -10,6 +10,8 @@ class AuthProvider with ChangeNotifier {
   bool _disposed = false;
   bool _isInitialized = false;
   Map<String, dynamic>? _organization;
+  List<Map<String, dynamic>> _userRoles = [];
+  Map<String, dynamic>? _primaryUserRole;
   Map<String, int> _deviceStats = {'total': 0, 'active': 0, 'inactive': 0};
 
   User? get user => _user;
@@ -18,7 +20,14 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthorized => _isAuthorized;
   bool get isInitialized => _isInitialized;
   Map<String, dynamic>? get organization => _organization;
+  List<Map<String, dynamic>> get userRoles => _userRoles;
+  Map<String, dynamic>? get primaryUserRole => _primaryUserRole;
   Map<String, int> get deviceStats => _deviceStats;
+  
+  String? get userType => _primaryUserRole?['user_type'];
+  dynamic get userDeviceAccess => _primaryUserRole?['devices'];
+  bool get hasManagerRole => userType == 'manager' || userType == 'admin';
+  bool get hasAllDeviceAccess => userDeviceAccess == "all";
 
   AuthProvider() {
     _initialize();
@@ -39,17 +48,21 @@ class AuthProvider with ChangeNotifier {
     if (_disposed) return;
     
     try {
-      if (_user?.email != null) {
-        _isAuthorized = await _authService.checkOrganizationEmail(_user!.email!);
+      if (_user?.id != null) {
+        _isAuthorized = await _authService.checkUserAuthorization(_user!.id);
         
         if (_isAuthorized) {
-          await _loadOrganizationData(_user!.email!);
+          await _loadUserRoleData(_user!.id);
         } else {
+          _userRoles = [];
+          _primaryUserRole = null;
           _organization = null;
           _deviceStats = {'total': 0, 'active': 0, 'inactive': 0};
         }
       } else {
         _isAuthorized = false;
+        _userRoles = [];
+        _primaryUserRole = null;
         _organization = null;
         _deviceStats = {'total': 0, 'active': 0, 'inactive': 0};
       }
@@ -63,6 +76,8 @@ class AuthProvider with ChangeNotifier {
       // Handle error silently to prevent crashes
       if (!_disposed) {
         _isAuthorized = false;
+        _userRoles = [];
+        _primaryUserRole = null;
         _organization = null;
         _deviceStats = {'total': 0, 'active': 0, 'inactive': 0};
         _isLoading = false;
@@ -71,10 +86,13 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _loadOrganizationData(String email) async {
-    _organization = await _authService.getOrganizationByEmail(email);
-    if (_organization != null) {
-      _deviceStats = await _authService.getDeviceStatistics(_organization!['id']);
+  Future<void> _loadUserRoleData(String userId) async {
+    _userRoles = await _authService.getUserRoles(userId);
+    _primaryUserRole = await _authService.getPrimaryUserRole(userId);
+    
+    if (_primaryUserRole != null) {
+      _organization = _primaryUserRole!['organization'];
+      _deviceStats = await _authService.getDeviceStatisticsForUser(userId);
     }
   }
 
@@ -125,6 +143,8 @@ class AuthProvider with ChangeNotifier {
       _setLoading(true);
       await _authService.signOut();
       _isAuthorized = false;
+      _userRoles = [];
+      _primaryUserRole = null;
       _organization = null;
       _deviceStats = {'total': 0, 'active': 0, 'inactive': 0};
     } finally {
@@ -133,8 +153,8 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> refreshDeviceStats() async {
-    if (_organization != null) {
-      _deviceStats = await _authService.getDeviceStatistics(_organization!['id']);
+    if (_user?.id != null) {
+      _deviceStats = await _authService.getDeviceStatisticsForUser(_user!.id);
       notifyListeners();
     }
   }

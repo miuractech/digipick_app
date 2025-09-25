@@ -109,36 +109,112 @@ class TermsConditionsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _InfoPageScaffold(
-      title: 'Terms & Conditions',
-      icon: Icons.description,
+    return _QCVationPageScaffold(
+      title: 'TERMS & CONDITIONS',
       child: SingleChildScrollView(
-        child: Text(
-          'Terms of Service\n\n'
-          '1. Acceptance of Terms\n'
-          'By accessing and using Imagepick, you accept and agree to be bound by the terms and provision of this agreement.\n\n'
-          '2. Use of Service\n'
-          'You may use our service for lawful purposes only. You agree not to use the service:\n'
-          '• For any unlawful purpose or to solicit others to unlawful acts\n'
-          '• To violate any international, federal, provincial, or state regulations, rules, laws, or local ordinances\n'
-          '• To infringe upon or violate our intellectual property rights or the intellectual property rights of others\n\n'
-          '3. Privacy Policy\n'
-          'Your privacy is important to us. Please review our Privacy Policy, which also governs your use of the Service.\n\n'
-          '4. Service Modifications\n'
-          'We reserve the right to modify or discontinue our service at any time without notice.\n\n'
-          '5. Limitations of Liability\n'
-          'We provide the service "as is" without warranties of any kind, either express or implied.\n\n'
-          '6. Governing Law\n'
-          'These terms shall be governed by and construed in accordance with the laws of the jurisdiction in which our company is registered.\n\n'
-          '7. Contact Information\n'
-          'For questions about these Terms of Service, please contact us at:\n'
-          'Email: support@paramount.com\n'
-          'Phone: +1 (555) 123-4567\n\n'
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Welcome to the QC Vation App. By using this application, you agree to comply with and be bound by the following terms and conditions of use.',
+              style: AppTextStyles.bodyLarge.copyWith(
+                height: 1.6,
+                color: AppColors.secondaryText,
+              ),
+            ),
+            const SizedBox(height: 24),
+            _buildSection(
+              '1. Acceptance of Terms',
+              'By downloading, installing, or using the QC Vation App, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.',
+            ),
+            const SizedBox(height: 24),
+            _buildSection(
+              '2. Use of the Application',
+              'You agree to use the QC Vation App only for lawful purposes and in accordance with these Terms. You agree not to use the app:',
+            ),
+            const SizedBox(height: 16),
+            _buildSubSection(
+              '• For any unlawful purpose or to solicit others to unlawful acts',
+            ),
+            const SizedBox(height: 12),
+            _buildSubSection(
+              '• To violate any applicable laws, regulations, or third-party rights',
+            ),
+            const SizedBox(height: 12),
+            _buildSubSection(
+              '• To transmit any harmful or malicious code',
+            ),
+            const SizedBox(height: 12),
+            _buildSubSection(
+              '• To interfere with or disrupt the app\'s functionality',
+            ),
+            const SizedBox(height: 24),
+            _buildSection(
+              '3. Intellectual Property',
+              'The QC Vation App and all its content, features, and functionality are owned by Paramount Instruments and are protected by international copyright, trademark, and other intellectual property laws.',
+            ),
+            const SizedBox(height: 24),
+            _buildSection(
+              '4. User Data and Privacy',
+              'Your use of the QC Vation App is also governed by our Privacy Policy. Please review our Privacy Policy to understand our practices regarding your personal information.',
+            ),
+            const SizedBox(height: 24),
+            _buildSection(
+              '5. Disclaimers and Limitations',
+              'The QC Vation App is provided "as is" without warranties of any kind, either express or implied. We do not warrant that the app will be uninterrupted or error-free.',
+            ),
+            const SizedBox(height: 24),
+            _buildSection(
+              '6. Contact Information',
+              'For questions about these Terms and Conditions, please contact us at:',
+            ),
+            const SizedBox(height: 16),
+            _buildSubSection('Email: support@paramount.com'),
+            const SizedBox(height: 8),
+            _buildSubSection('Phone: +1 (555) 123-4567'),
+            const SizedBox(height: 24),
+            Text(
           'Last updated: January 2024',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.tertiaryText,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSection(String title, String content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
           style: AppTextStyles.bodyLarge.copyWith(
-            height: 1.6,
+            fontWeight: FontWeight.w600,
+            color: AppColors.primaryText,
           ),
         ),
+        const SizedBox(height: 8),
+        Text(
+          content,
+          style: AppTextStyles.bodyMedium.copyWith(
+            height: 1.5,
+            color: AppColors.secondaryText,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubSection(String content) {
+    return Text(
+      content,
+      style: AppTextStyles.bodyMedium.copyWith(
+        height: 1.5,
+        color: AppColors.secondaryText,
       ),
     );
   }
@@ -149,50 +225,109 @@ class PrivacyPolicyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _InfoPageScaffold(
-      title: 'Privacy Policy',
-      icon: Icons.privacy_tip,
+    return _QCVationPageScaffold(
+      title: 'PRIVACY POLICY',
       child: SingleChildScrollView(
-        child: Text(
-          'Privacy Policy\n\n'
-          '1. Information We Collect\n'
-          'We collect information you provide directly to us, such as when you:\n'
-          '• Create an account\n'
-          '• Use our services\n'
-          '• Contact us for support\n'
-          '• Subscribe to our newsletter\n\n'
-          '2. How We Use Your Information\n'
-          'We use the information we collect to:\n'
-          '• Provide, maintain, and improve our services\n'
-          '• Process transactions and send related information\n'
-          '• Send technical notices and support messages\n'
-          '• Respond to your comments and questions\n\n'
-          '3. Information Sharing and Disclosure\n'
-          'We do not sell, trade, or rent your personal information to third parties. We may share your information in the following situations:\n'
-          '• With your consent\n'
-          '• For legal reasons\n'
-          '• To protect rights and safety\n\n'
-          '4. Data Security\n'
-          'We implement appropriate technical and organizational security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.\n\n'
-          '5. Data Retention\n'
-          'We retain your information for as long as necessary to provide our services and fulfill the purposes outlined in this policy.\n\n'
-          '6. Your Rights\n'
-          'You have the right to:\n'
-          '• Access your personal information\n'
-          '• Correct inaccurate information\n'
-          '• Request deletion of your information\n'
-          '• Object to processing of your information\n\n'
-          '7. Changes to This Policy\n'
-          'We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page.\n\n'
-          '8. Contact Us\n'
-          'If you have any questions about this Privacy Policy, please contact us at:\n'
-          'Email: privacy@paramount.com\n'
-          'Address: 123 Technology Drive, Innovation City, IC 12345\n\n'
-          'Last updated: January 2024',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'At Paramount Instruments, we value your privacy and are committed to protecting the personal information you provide through the QC Vation App. This Privacy Policy explains how we collect, use, and protect your data.',
+              style: AppTextStyles.bodyLarge.copyWith(
+                height: 1.6,
+                color: AppColors.secondaryText,
+              ),
+            ),
+            const SizedBox(height: 24),
+            _buildSection(
+              '1. Information We Collect',
+              'We may collect the following types of information when you use the QC Vation App:',
+            ),
+            const SizedBox(height: 16),
+            _buildSubSection(
+              'Personal Information: This includes your name, email address, company details, and any other information you voluntarily provide.',
+            ),
+            const SizedBox(height: 12),
+            _buildSubSection(
+              'Usage Data: We collect technical information related to your usage of the app, such as IP addresses, device identifiers, app version, and log data.',
+            ),
+            const SizedBox(height: 12),
+            _buildSubSection(
+              'Test Data: The app may collect data related to your textile testing results, including test results, configurations, and other relevant metrics.',
+            ),
+            const SizedBox(height: 24),
+            _buildSection(
+              '2. How We Use Your Information',
+              'We use the collected data to:',
+            ),
+            const SizedBox(height: 16),
+            _buildSubSection(
+              'Improve the functionality and user experience of the QC Vation App.',
+            ),
+            const SizedBox(height: 12),
+            _buildSubSection(
+              'Provide you with technical support and customer service.',
+            ),
+            const SizedBox(height: 12),
+            _buildSubSection(
+              'Monitor usage patterns to improve our services.',
+            ),
+            const SizedBox(height: 12),
+            _buildSubSection(
+              'Ensure the accuracy of test results and performance analytics.',
+            ),
+            const SizedBox(height: 24),
+            _buildSection(
+              '3. Data Sharing',
+              'We do not sell, trade, or share your personal information with third parties, except in the following cases:',
+            ),
+            const SizedBox(height: 16),
+            _buildSubSection(
+              'To comply with legal obligations.',
+            ),
+            const SizedBox(height: 12),
+            _buildSubSection(
+              'If required for providing our services (e.g., with trusted partners who assist us with app development or support).',
+            ),
+            const SizedBox(height: 12),
+            _buildSubSection(
+              'With your explicit consent.',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSection(String title, String content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
           style: AppTextStyles.bodyLarge.copyWith(
-            height: 1.6,
+            fontWeight: FontWeight.w600,
+            color: AppColors.primaryText,
           ),
         ),
+        const SizedBox(height: 8),
+        Text(
+          content,
+          style: AppTextStyles.bodyMedium.copyWith(
+            height: 1.5,
+            color: AppColors.secondaryText,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubSection(String content) {
+    return Text(
+      content,
+      style: AppTextStyles.bodyMedium.copyWith(
+        height: 1.5,
+        color: AppColors.secondaryText,
       ),
     );
   }
@@ -384,6 +519,70 @@ class _InfoPageScaffold extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QCVationPageScaffold extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const _QCVationPageScaffold({
+    required this.title,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.backgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header with back button and logo
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  AppComponents.iconButton(
+                    icon: Icons.arrow_back,
+                    onPressed: () => Navigator.pop(context),
+                    iconColor: AppColors.primaryText,
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: Image.asset(
+                        'lib/assets/logo.png',
+                        height: 32,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 48), // Balance the back button
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Title
+            Text(
+              title,
+              style: AppTextStyles.h1.copyWith(
+                fontWeight: FontWeight.w700,
+                fontSize: 24,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: child,
+              ),
+            ),
+          ],
         ),
       ),
     );

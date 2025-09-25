@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../models/device_test.dart';
 import '../services/auth_service.dart';
 import '../providers/auth_provider.dart';
@@ -60,16 +59,16 @@ class _ReportsPageState extends State<ReportsPage> {
 
   Future<void> _loadInitialData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    if (authProvider.organization != null) {
+    if (authProvider.user != null) {
       await Future.wait([
-        _loadDevices(authProvider.organization!['id']),
+        _loadDevices(authProvider.user!.id),
         _loadReports(reset: true),
       ]);
     }
   }
 
-  Future<void> _loadDevices(String companyId) async {
-    final devices = await _authService.getDevicesForOrganization(companyId);
+  Future<void> _loadDevices(String userId) async {
+    final devices = await _authService.getDevicesForUser(userId);
     setState(() {
       _devices = devices;
     });
@@ -102,8 +101,8 @@ class _ReportsPageState extends State<ReportsPage> {
           ? 0 
           : (_currentPage == 0 ? 0 : (_currentPage - 1) * _pageSize + (isDefaultLoad ? 10 : 0));
       
-      final reportsData = await _authService.getDeviceTests(
-        companyId: authProvider.organization!['id'],
+      final reportsData = await _authService.getDeviceTestsForUser(
+        userId: authProvider.user!.id,
         deviceId: _selectedDeviceId,
         status: _selectedStatus,
         startDate: _startDate,
@@ -138,43 +137,30 @@ class _ReportsPageState extends State<ReportsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                SvgPicture.asset(
-                  'lib/assets/logo.svg',
-                  height: 32,
-                ),
-                Row(
-                  children: [
-                    AppComponents.iconButton(
-                      icon: Icons.filter_list,
-                      onPressed: _showFilterModal,
-                      iconColor: AppColors.primaryText,
-                    ),
-                    AppComponents.iconButton(
-                      icon: Icons.refresh,
-                      onPressed: () async {
-                        await _loadReports(reset: true);
-                      },
-                      iconColor: AppColors.primaryText,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Expanded(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppComponents.universalHeader(
+            showBackButton: true,
+            onBackPressed: () => Navigator.pop(context),
+            actions: [
+              AppComponents.iconButton(
+                icon: Icons.filter_list,
+                onPressed: _showFilterModal,
+                iconColor: AppColors.primaryText,
+              ),
+              AppComponents.iconButton(
+                icon: Icons.refresh,
+                onPressed: () async {
+                  await _loadReports(reset: true);
+                },
+                iconColor: AppColors.primaryText,
+              ),
+            ],
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: RefreshIndicator(
                 onRefresh: () async {
                   await _loadReports(reset: true);
@@ -182,8 +168,8 @@ class _ReportsPageState extends State<ReportsPage> {
                 child: _buildReportsList(),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

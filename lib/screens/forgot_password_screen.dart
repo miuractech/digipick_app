@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../theme/app_components.dart';
 import '../theme/auth_components.dart';
+import '../utils/error_handler.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -28,11 +28,29 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final error = await authProvider.resetPassword(_emailController.text.trim());
 
     if (error != null && mounted) {
-      AppComponents.showErrorSnackbar(context, error);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ErrorHandler.getAuthErrorMessage(error)),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
     } else if (mounted) {
-      AppComponents.showSuccessSnackbar(
-        context,
-        'Password reset email sent. Check your inbox.'
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.mail_outline, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(child: Text('Password reset email sent. Check your inbox.')),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          duration: const Duration(milliseconds: 2000),
+        ),
       );
       Navigator.pop(context);
     }
@@ -75,40 +93,41 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(height: 40),
               
               // Form
-              Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Email input field
-                    AuthComponents.inputField(
-                      controller: _emailController,
-                      hintText: 'Email',
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 40),
-                    
-                    // Send Password Reset Link button
-                    Consumer<AuthProvider>(
-                      builder: (context, authProvider, child) {
-                        return AuthComponents.primaryButton(
+              Consumer<AuthProvider>(
+                builder: (context, authProvider, child) {
+                  return Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Email input field
+                        AuthComponents.inputField(
+                          controller: _emailController,
+                          hintText: 'Email',
+                          keyboardType: TextInputType.emailAddress,
+                          enabled: !authProvider.isLoading,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your email';
+                            }
+                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                              return 'Please enter a valid email';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 40),
+                        
+                        // Send Password Reset Link button
+                        AuthComponents.primaryButton(
                           text: 'Send Password Reset Link',
                           onPressed: authProvider.isLoading ? null : _resetPassword,
                           isLoading: authProvider.isLoading,
-                        );
-                      },
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
               
               // Paramount footer

@@ -70,20 +70,41 @@ class AuthWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        // Show loading screen during initial load or auth operations
-        if (authProvider.isLoading) {
+        // Only show loading screen during initial load (not when authenticated)
+        if (authProvider.isLoading && !authProvider.isInitialized) {
           return Scaffold(
             backgroundColor: AppColors.backgroundColor,
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: AppSizes.lg),
-                  Text(
-                    'Loading...',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.tertiaryText,
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(
+                          strokeWidth: 3,
+                        ),
+                        const SizedBox(height: AppSizes.lg),
+                        Text(
+                          'Loading...',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.tertiaryText,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -95,6 +116,47 @@ class AuthWrapper extends StatelessWidget {
         if (authProvider.isAuthenticated) {
           if (authProvider.isAuthorized) {
             return const HomeScreen();
+          } else if (authProvider.isLoading) {
+            // Show a minimal loading indicator for authorization check
+            return Scaffold(
+              backgroundColor: AppColors.backgroundColor,
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(
+                            strokeWidth: 3,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Setting up your account...',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.tertiaryText,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
           } else {
             return const UnauthorizedScreen();
           }

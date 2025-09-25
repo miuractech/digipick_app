@@ -5,8 +5,11 @@ import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_components.dart';
 import 'reports_page.dart';
-import 'care_page.dart';
 import 'stats_page.dart';
+import 'home_screen.dart';
+import 'add_device_screen.dart';
+import 'service_request_screen.dart';
+import 'device_statistics_screen.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -33,11 +36,12 @@ class _HomepageState extends State<Homepage> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      body: SafeArea(
+      body: SingleChildScrollView(
         child: Column(
           children: [
-            // Banner section
-            Container(
+            AppComponents.universalHeader(),
+                  // Banner section
+                  Container(
               width: double.infinity,
               height: 200,
               margin: const EdgeInsets.all(16),
@@ -78,12 +82,14 @@ class _HomepageState extends State<Homepage> {
               ),
             ),
             
-            // Statistics cards
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildStatisticsCards(context, authProvider),
-            ),
-            const SizedBox(height: 24),
+            // Statistics cards (only for managers)
+            if (authProvider.hasManagerRole) ...[
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildStatisticsCards(context, authProvider),
+              ),
+              const SizedBox(height: 24),
+            ],
             
             // Instruments section header
             Padding(
@@ -155,15 +161,20 @@ class _HomepageState extends State<Homepage> {
             ],
             
             // Device list
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildDevicesList(context, authProvider),
-              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _buildDevicesList(context, authProvider),
             ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
+      floatingActionButton: authProvider.hasManagerRole 
+          ? AppComponents.floatingActionButton(
+              onAddDevice: () => _navigateToAddDevice(context),
+              onServiceRequest: () => _navigateToServiceRequest(context),
+            )
+          : null,
     );
   }
 
@@ -171,26 +182,26 @@ class _HomepageState extends State<Homepage> {
     if (authProvider.organization == null) {
       return Row(
         children: [
-          Expanded(child: _buildStatCard('0', 'Total\nDevices')),
+          Expanded(child: _buildStatCard('0', 'Total\nDevices', 'total_devices')),
           const SizedBox(width: 12),
-          Expanded(child: _buildStatCard('0', 'AMC\nActive')),
+          Expanded(child: _buildStatCard('0', 'AMC\nActive', 'amc_active')),
           const SizedBox(width: 12),
-          Expanded(child: _buildStatCard('0', 'Service\nRequest')),
+          Expanded(child: _buildStatCard('0', 'Service\nRequest', 'service_request')),
         ],
       );
     }
 
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _authService.getDevicesForOrganization(authProvider.organization!['id']),
+      future: _authService.getDevicesForUser(authProvider.user!.id),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Row(
             children: [
-              Expanded(child: _buildStatCard('...', 'Total\nDevices')),
+              Expanded(child: _buildStatCard('...', 'Total\nDevices', 'total_devices')),
               const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('...', 'AMC\nActive')),
+              Expanded(child: _buildStatCard('...', 'AMC\nActive', 'amc_active')),
               const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('...', 'Service\nRequest')),
+              Expanded(child: _buildStatCard('...', 'Service\nRequest', 'service_request')),
             ],
           );
         }
@@ -215,52 +226,58 @@ class _HomepageState extends State<Homepage> {
 
         return Row(
           children: [
-            Expanded(child: _buildStatCard(totalDevices.toString(), 'Total\nDevices')),
+            Expanded(child: _buildStatCard(totalDevices.toString(), 'Total\nDevices', 'total_devices')),
             const SizedBox(width: 12),
-            Expanded(child: _buildStatCard(amcActiveDevices.toString(), 'AMC\nActive')),
+            Expanded(child: _buildStatCard(amcActiveDevices.toString(), 'AMC\nActive', 'amc_active')),
             const SizedBox(width: 12),
-            Expanded(child: _buildStatCard(serviceRequests.toString(), 'Service\nRequest')),
+            Expanded(child: _buildStatCard(serviceRequests.toString(), 'Service\nRequest', 'service_request')),
           ],
         );
       },
     );
   }
 
-  Widget _buildStatCard(String number, String label) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            number,
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
+  Widget _buildStatCard(String number, String label, String statisticsType) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    return GestureDetector(
+      onTap: authProvider.hasManagerRole 
+          ? () => _navigateToDeviceStatistics(context, statisticsType, label.replaceAll('\n', ' '))
+          : null,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black54,
-              fontWeight: FontWeight.w500,
+          ],
+        ),
+        child: Column(
+          children: [
+            Text(
+              number,
+              style: const TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black54,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -290,9 +307,9 @@ class _HomepageState extends State<Homepage> {
     }
 
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: authProvider.organization != null 
-          ? _authService.getDevicesForOrganization(
-              authProvider.organization!['id'],
+      future: authProvider.user != null 
+          ? _authService.getDevicesForUser(
+              authProvider.user!.id,
               searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
             )
           : Future.value([]),
@@ -318,18 +335,15 @@ class _HomepageState extends State<Homepage> {
           );
         }
 
-        return ListView.builder(
-          itemCount: devices.length,
-          itemBuilder: (context, index) {
-            final device = devices[index];
-            return _buildDeviceCard(context, device);
-          },
+        return Column(
+          children: devices.map((device) => _buildDeviceCard(context, device)).toList(),
         );
       },
     );
   }
 
   Widget _buildDeviceCard(BuildContext context, Map<String, dynamic> device) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final isActive = device['archived'] != true;
     final now = DateTime.now();
     final amcEndDate = device['amc_end_date'] != null 
@@ -547,20 +561,26 @@ class _HomepageState extends State<Homepage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => _navigateToStats(context, device),
+                    onTap: authProvider.hasManagerRole 
+                        ? () => _navigateToStats(context, device)
+                        : null,
                     child: Container(
                       margin: const EdgeInsets.only(right: 16),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: authProvider.hasManagerRole 
+                            ? Colors.grey[200] 
+                            : Colors.grey[100],
                         borderRadius: BorderRadiusGeometry.directional(bottomEnd: Radius.circular(20), bottomStart: Radius.circular(20)),
                        
                       ),
-                      child: const Text(
+                      child: Text(
                         'Stats',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.black,
+                          color: authProvider.hasManagerRole 
+                              ? Colors.black 
+                              : Colors.grey[500],
                           fontSize: 18,
                           fontWeight: FontWeight.w500,
                         ),
@@ -586,10 +606,11 @@ class _HomepageState extends State<Homepage> {
   }
 
   void _navigateToCare(BuildContext context) {
-    Navigator.push(
+    // Navigate to HomeScreen with Care tab selected
+    Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => const CarePage(),
+        builder: (context) => const HomeScreen(initialIndex: 1),
       ),
     );
   }
@@ -599,6 +620,36 @@ class _HomepageState extends State<Homepage> {
       context,
       MaterialPageRoute(
         builder: (context) => StatsPage(device: device),
+      ),
+    );
+  }
+
+  void _navigateToAddDevice(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AddDeviceScreen(),
+      ),
+    );
+  }
+
+  void _navigateToServiceRequest(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ServiceRequestScreen(),
+      ),
+    );
+  }
+
+  void _navigateToDeviceStatistics(BuildContext context, String statisticsType, String title) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DeviceStatisticsScreen(
+          statisticsType: statisticsType,
+          title: title,
+        ),
       ),
     );
   }

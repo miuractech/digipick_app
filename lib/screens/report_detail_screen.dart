@@ -12,35 +12,30 @@ class ReportDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      appBar: AppBar(
-        backgroundColor: AppColors.cardBackground,
-        elevation: 0,
-        leading: AppComponents.iconButton(
-          icon: Icons.arrow_back,
-          onPressed: () => Navigator.pop(context),
-          iconColor: AppColors.primaryText,
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                // TODO: Implement download functionality
-              },
-              icon: const Icon(Icons.download, size: 20),
-              label: const Text('Download'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryAccent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: AppBorderRadius.button,
+      body: Column(
+        children: [
+          AppComponents.universalHeader(
+            showBackButton: true,
+            onBackPressed: () => Navigator.pop(context),
+            actions: [
+              ElevatedButton.icon(
+                onPressed: () {
+                  // TODO: Implement download functionality
+                },
+                icon: const Icon(Icons.download, size: 20),
+                label: const Text('Download'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryAccent,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppBorderRadius.button,
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
+          Expanded(
+            child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,6 +53,9 @@ class ReportDetailScreen extends StatelessWidget {
             _buildTestResults(),
           ],
         ),
+            ),
+          ),
+        ],
       ),
     );
   }
