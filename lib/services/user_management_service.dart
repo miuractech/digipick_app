@@ -115,7 +115,7 @@ class UserManagementService {
       final response = await _supabase
           .from('user_tracking')
           .insert({
-            'organization_id': organizationId,
+            'organization_id': organizationId, 
             'email': email.toLowerCase(),
             'user_type': userType,
             'devices': devices,
