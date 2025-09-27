@@ -224,12 +224,8 @@ class _CarePageState extends State<CarePage> {
                   
                   // Search Bar
                   _buildSearchBar(),
-                  const SizedBox(height: 16),
-                  
                   // Results Header
-                  _buildResultsHeader(),
-                  const SizedBox(height: 16),
-                  
+                  // _buildResultsHeader(),
                   // Service Requests List
                   Expanded(
                     child: _buildServiceRequestsList(),
@@ -279,7 +275,6 @@ class _CarePageState extends State<CarePage> {
             ],
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 16),
         ),
       ),
     );
@@ -397,49 +392,9 @@ class _CarePageState extends State<CarePage> {
   }
 
   Widget _buildSectionHeader(String title, String subtitle, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.h3.copyWith(
-                    color: color,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: color.withOpacity(0.8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return Text(
+      title,
+      style: AppTextStyles.h3,
     );
   }
 

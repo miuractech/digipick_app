@@ -21,6 +21,8 @@
  * 
  * AUTOMATIC ROLE ASSIGNMENT:
  * - Organization email holders automatically get 'manager' role with "all" device access
+ * - If user exists: immediate user_role entry created
+ * - If user doesn't exist: added to user_tracking, becomes manager when they sign up
  * - Additional users can be manually added with specific permissions
  * - When organization email changes, roles are automatically updated
  */
@@ -116,8 +118,9 @@ create trigger user_role_updated_at
   for each row
   execute function update_user_role_updated_at();
 
--- Function to sync organization email with user_role table
+-- Function to sync organization email with user_role and user_tracking tables
 -- Automatically manages user roles when organization details change
+-- Handles both existing and non-existing users via user_tracking system
 create or replace function sync_organization_user_role()
 returns trigger as $$
 declare
@@ -129,12 +132,20 @@ begin
     select * into user_record from public.users where email = new.email;
     
     if found then
-      -- Insert user role as manager with "all" device access
+      -- User exists: Insert user role as manager with "all" device access
       insert into public.user_role (user_id, organization_id, user_type, devices)
       values (user_record.id, new.id, 'manager', '"all"'::jsonb)
       on conflict (user_id, organization_id) do update set
         user_type = excluded.user_type,
         devices = excluded.devices,
+        updated_at = timezone('utc'::text, now());
+    else
+      -- User doesn't exist: Add to user_tracking so they become manager when they sign up
+      insert into public.user_tracking (organization_id, email, user_type, devices, added_by)
+      values (new.id, new.email, 'manager', '"all"'::jsonb, null)
+      on conflict (organization_id, email) do update set
+        user_type = 'manager',
+        devices = '"all"'::jsonb,
         updated_at = timezone('utc'::text, now());
     end if;
   end if;
@@ -153,26 +164,43 @@ begin
             and organization_id = old.id 
             and user_type = 'manager';
         end if;
+        
+        -- Also remove from user_tracking
+        delete from public.user_tracking
+        where organization_id = old.id 
+          and email = old.email 
+          and user_type = 'manager'
+          and added_by is null; -- Only remove system-created entries
       end if;
       
-      -- Add new email's manager role with full device access if new email exists
+      -- Add new email's manager role with full device access
       if new.email is not null then
         select * into user_record from public.users where email = new.email;
         if found then
+          -- User exists: Create user_role immediately
           insert into public.user_role (user_id, organization_id, user_type, devices)
           values (user_record.id, new.id, 'manager', '"all"'::jsonb)
           on conflict (user_id, organization_id) do update set
             user_type = excluded.user_type,
             devices = excluded.devices,
             updated_at = timezone('utc'::text, now());
+        else
+          -- User doesn't exist: Add to user_tracking for future signup
+          insert into public.user_tracking (organization_id, email, user_type, devices, added_by)
+          values (new.id, new.email, 'manager', '"all"'::jsonb, null)
+          on conflict (organization_id, email) do update set
+            user_type = 'manager',
+            devices = '"all"'::jsonb,
+            updated_at = timezone('utc'::text, now());
         end if;
       end if;
     end if;
   end if;
 
-  -- Handle DELETE: Clean up user roles for this organization
+  -- Handle DELETE: Clean up user roles and tracking for this organization
   if tg_op = 'DELETE' then
     delete from public.user_role where organization_id = old.id;
+    delete from public.user_tracking where organization_id = old.id;
     return old;
   end if;
 

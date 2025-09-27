@@ -3,6 +3,7 @@ create table public.device_test (
   created_at timestamp with time zone null default now(),
   updated_at timestamp with time zone null default now(),
   folder_name text not null,
+  pdf_url text null,
   images text[] null default '{}'::text[],
   device_id uuid null,
   device_name text null,

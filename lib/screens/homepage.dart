@@ -389,7 +389,7 @@ class _HomepageState extends State<Homepage> {
                         text: TextSpan(
                           children: [
                             TextSpan(
-                              text: "DigiPICK™ i11",
+                              text: "${device['device_name'] ?? 'Unknown Device'} ${device['model'] ?? ''}".trim(),
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w600,

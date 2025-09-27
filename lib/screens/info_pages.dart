@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_components.dart';
 
@@ -49,6 +50,15 @@ class AboutParamountScreen extends StatelessWidget {
 class VisitSiteScreen extends StatelessWidget {
   const VisitSiteScreen({super.key});
 
+  static const String _paramountUrl = 'https://paramountinstruments.com/';
+
+  Future<void> _launchUrl() async {
+    final Uri url = Uri.parse(_paramountUrl);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      throw Exception('Could not launch $_paramountUrl');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return _InfoPageScaffold(
@@ -58,42 +68,78 @@ class VisitSiteScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Visit our official website to discover more about our products, services, and latest innovations in imaging technology.',
+            'Visit our official website to discover more about our products, services, and latest innovations in quality control solutions.',
             style: AppTextStyles.bodyLarge.copyWith(
               height: 1.6,
             ),
           ),
           const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.language, color: Colors.grey[600], size: 24),
-                const SizedBox(width: 12),
-                const Text(
-                  'www.paramount.com',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primaryText,
+          GestureDetector(
+            onTap: () async {
+              try {
+                await _launchUrl();
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Could not open website: $e'),
+                      backgroundColor: AppColors.errorColor,
+                    ),
+                  );
+                }
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.primaryAccent.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.primaryAccent.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.language, color: AppColors.primaryAccent, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'paramountinstruments.com',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primaryText,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tap to visit website',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primaryAccent,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  Icon(
+                    Icons.open_in_new,
+                    color: AppColors.primaryAccent,
+                    size: 20,
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 24),
           Text(
             'Explore our:\n'
+            '• World-class quality control solutions\n'
             '• Product catalog and specifications\n'
-            '• Technical documentation\n'
-            '• Customer support resources\n'
-            '• Latest news and updates\n'
-            '• Career opportunities',
+            '• Technical documentation and support\n'
+            '• Latest innovations and updates\n'
+            '• Service and calibration offerings',
             style: AppTextStyles.bodyLarge.copyWith(
               height: 1.6,
             ),
@@ -389,7 +435,7 @@ class UpgradeFirmwareScreen extends StatelessWidget {
             child: ElevatedButton(
               onPressed: () => _checkForUpdates(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
+                backgroundColor: AppColors.primaryAccent,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(

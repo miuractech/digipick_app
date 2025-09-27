@@ -41,8 +41,8 @@ class AboutParamountScreen extends StatelessWidget {
                     Text(
                       'ABOUT',
                       style: AppTextStyles.bodyMedium.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
                         color: AppColors.primaryText,
                         letterSpacing: 1.2,
                       ),

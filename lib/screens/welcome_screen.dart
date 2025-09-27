@@ -41,14 +41,14 @@ class WelcomeScreen extends StatelessWidget {
                     Text(
                       'WELCOME TO',
                       style: AppTextStyles.bodyMedium.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
                         color: AppColors.primaryText,
                         letterSpacing: 1.2,
                       ),
                     ),
                     
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     
                     // QC VATION logo
                     Image.asset(
@@ -63,8 +63,7 @@ class WelcomeScreen extends StatelessWidget {
                     Text(
                       'by',
                       style: AppTextStyles.bodyMedium.copyWith(
-                        fontSize: 14,
-                        fontStyle: FontStyle.italic,
+                        fontSize: 22,
                         color: AppColors.secondaryText,
                       ),
                     ),

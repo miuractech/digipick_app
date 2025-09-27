@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import '../providers/auth_provider.dart';
+import '../services/company_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_components.dart';
 
@@ -39,9 +38,7 @@ class CompanyDetails {
 }
 
 class EditProfileScreen extends StatefulWidget {
-  final CompanyDetails? companyDetails;
-
-  const EditProfileScreen({super.key, this.companyDetails});
+  const EditProfileScreen({super.key});
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
@@ -49,108 +46,97 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
-  final ImagePicker _picker = ImagePicker();
-  
-  // User Profile Controllers (matching design)
-  TextEditingController? _firstNameController;
-  TextEditingController? _middleNameController;
-  TextEditingController? _lastNameController;
-  TextEditingController? _phoneController;
-  TextEditingController? _companyNameController;
-  TextEditingController? _designationController;
+  final CompanyService _companyService = CompanyService();
   
   // Company Details Controllers
-  TextEditingController? _nameController;
-  TextEditingController? _legalNameController;
-  TextEditingController? _gstController;
-  TextEditingController? _panController;
-  TextEditingController? _cinController;
-  TextEditingController? _emailController;
-  TextEditingController? _addressLine1Controller;
-  TextEditingController? _addressLine2Controller;
-  TextEditingController? _cityController;
-  TextEditingController? _stateController;
-  TextEditingController? _postalCodeController;
-  TextEditingController? _countryController;
+  late TextEditingController _nameController;
+  late TextEditingController _legalNameController;
+  late TextEditingController _gstController;
+  late TextEditingController _panController;
+  late TextEditingController _cinController;
+  late TextEditingController _emailController;
+  late TextEditingController _phoneController;
+  late TextEditingController _addressLine1Controller;
+  late TextEditingController _addressLine2Controller;
+  late TextEditingController _cityController;
+  late TextEditingController _stateController;
+  late TextEditingController _postalCodeController;
+  late TextEditingController _countryController;
   
-  File? _profileImage;
   bool _loading = true;
+  bool _saving = false;
+  Map<String, String> _validationErrors = {};
 
   @override
   void initState() {
     super.initState();
+    _initializeControllers();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = mounted ? Provider.of<AuthProvider>(context, listen: false) : null;
-      final org = authProvider?.organization;
-      
-      final details = org != null
-          ? CompanyDetails(
-              name: org['name'],
-              legalName: org['legal_name'],
-              gstNumber: org['gst_number'],
-              panNumber: org['pan_number'],
-              cinNumber: org['cin_number'],
-              email: org['email'],
-              phone: org['phone'],
-              addressLine1: org['address_line1'],
-              addressLine2: org['address_line2'],
-              city: org['city'],
-              state: org['state'],
-              postalCode: org['postal_code'],
-              country: org['country'],
-            )
-          : (widget.companyDetails ?? CompanyDetails());
-      
+      _loadCompanyDetails();
+    });
+  }
+
+  void _initializeControllers() {
+    _nameController = TextEditingController();
+    _legalNameController = TextEditingController();
+    _gstController = TextEditingController();
+    _panController = TextEditingController();
+    _cinController = TextEditingController();
+    _emailController = TextEditingController();
+    _phoneController = TextEditingController();
+    _addressLine1Controller = TextEditingController();
+    _addressLine2Controller = TextEditingController();
+    _cityController = TextEditingController();
+    _stateController = TextEditingController();
+    _postalCodeController = TextEditingController();
+    _countryController = TextEditingController(text: 'India');
+  }
+
+  Future<void> _loadCompanyDetails() async {
+    if (!mounted) return;
+    
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final organization = authProvider.organization;
+    
+    if (organization != null) {
       setState(() {
-        // Initialize user profile fields
-        _firstNameController = TextEditingController(text: org?['contact_person']?.split(' ')[0] ?? 'John');
-        _middleNameController = TextEditingController(text: 'Middler');
-        _lastNameController = TextEditingController(text: org?['contact_person']?.split(' ').last ?? 'Doe');
-        _phoneController = TextEditingController(text: org?['phone'] ?? '9876543210');
-        _companyNameController = TextEditingController(text: org?['name'] ?? 'ABC Company');
-        _designationController = TextEditingController(text: 'CEO, MANAGER, Etc');
-        
-        // Initialize company details
-        _nameController = TextEditingController(text: details.name);
-        _legalNameController = TextEditingController(text: details.legalName);
-        _gstController = TextEditingController(text: details.gstNumber);
-        _panController = TextEditingController(text: details.panNumber);
-        _cinController = TextEditingController(text: details.cinNumber);
-        _emailController = TextEditingController(text: details.email);
-        _addressLine1Controller = TextEditingController(text: details.addressLine1);
-        _addressLine2Controller = TextEditingController(text: details.addressLine2);
-        _cityController = TextEditingController(text: details.city);
-        _stateController = TextEditingController(text: details.state);
-        _postalCodeController = TextEditingController(text: details.postalCode);
-        _countryController = TextEditingController(text: details.country);
+        _nameController.text = organization['name'] ?? '';
+        _legalNameController.text = organization['legal_name'] ?? '';
+        _gstController.text = organization['gst_number'] ?? '';
+        _panController.text = organization['pan_number'] ?? '';
+        _cinController.text = organization['cin_number'] ?? '';
+        _emailController.text = organization['email'] ?? '';
+        _phoneController.text = organization['phone'] ?? '';
+        _addressLine1Controller.text = organization['address_line1'] ?? '';
+        _addressLine2Controller.text = organization['address_line2'] ?? '';
+        _cityController.text = organization['city'] ?? '';
+        _stateController.text = organization['state'] ?? '';
+        _postalCodeController.text = organization['postal_code'] ?? '';
+        _countryController.text = organization['country'] ?? 'India';
         _loading = false;
       });
-    });
+    } else {
+      setState(() {
+        _loading = false;
+      });
+    }
   }
 
   @override
   void dispose() {
-    // User profile controllers
-    _firstNameController?.dispose();
-    _middleNameController?.dispose();
-    _lastNameController?.dispose();
-    _phoneController?.dispose();
-    _companyNameController?.dispose();
-    _designationController?.dispose();
-    
-    // Company details controllers
-    _nameController?.dispose();
-    _legalNameController?.dispose();
-    _gstController?.dispose();
-    _panController?.dispose();
-    _cinController?.dispose();
-    _emailController?.dispose();
-    _addressLine1Controller?.dispose();
-    _addressLine2Controller?.dispose();
-    _cityController?.dispose();
-    _stateController?.dispose();
-    _postalCodeController?.dispose();
-    _countryController?.dispose();
+    _nameController.dispose();
+    _legalNameController.dispose();
+    _gstController.dispose();
+    _panController.dispose();
+    _cinController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _addressLine1Controller.dispose();
+    _addressLine2Controller.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    _postalCodeController.dispose();
+    _countryController.dispose();
     super.dispose();
   }
 
@@ -176,7 +162,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    'EDIT ACCOUNT PROFILE',
+                    'EDIT COMPANY PROFILE',
                     style: AppTextStyles.h2.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -184,27 +170,56 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                   const SizedBox(height: 32),
                   
-                  // Profile Picture Section
-                  _buildProfilePictureSection(),
-                  const SizedBox(height: 32),
-                  
-                  // User Profile Form
+                  // Company Details Form
                   Form(
                     key: _formKey,
                     child: Column(
                       children: [
-                        _buildTextField('First Name', _firstNameController!),
+                        _buildTextField(
+                          'Company Name *', 
+                          _nameController,
+                          required: true,
+                        ),
                         const SizedBox(height: 16),
-                        _buildTextField('Middle Name', _middleNameController!),
+                        _buildTextField('Legal Name', _legalNameController),
                         const SizedBox(height: 16),
-                        _buildTextField('Last Name', _lastNameController!),
+                        _buildTextField('GST Number', _gstController),
                         const SizedBox(height: 16),
-                        _buildTextField('Phone number', _phoneController!, 
-                          keyboardType: TextInputType.phone),
+                        _buildTextField('PAN Number', _panController),
                         const SizedBox(height: 16),
-                        _buildTextField('Company Name', _companyNameController!),
+                        _buildTextField('CIN Number', _cinController),
                         const SizedBox(height: 16),
-                        _buildTextField('Designation', _designationController!),
+                        _buildTextField(
+                          'Email', 
+                          _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          'Phone Number', 
+                          _phoneController,
+                          keyboardType: TextInputType.phone,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField('Address Line 1', _addressLine1Controller),
+                        const SizedBox(height: 16),
+                        _buildTextField('Address Line 2', _addressLine2Controller),
+                        const SizedBox(height: 16),
+                        _buildTextField('City', _cityController),
+                        const SizedBox(height: 16),
+                        _buildTextField('State', _stateController),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          'Postal Code', 
+                          _postalCodeController,
+                          keyboardType: TextInputType.number,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField('Country', _countryController),
+                        const SizedBox(height: 32),
+                        
+                        // Save Button
+                        _buildSaveButton(),
                         const SizedBox(height: 32),
                       ],
                     ),
@@ -218,90 +233,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildProfilePictureSection() {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final organization = authProvider.organization;
+  Widget _buildTextField(
+    String label, 
+    TextEditingController controller, {
+    TextInputType? keyboardType,
+    bool required = false,
+  }) {
+    final fieldKey = label.toLowerCase().replaceAll(' ', '_').replaceAll('*', '');
+    final hasError = _validationErrors.containsKey(fieldKey);
     
-    return Column(
-      children: [
-        // Profile Picture
-        Stack(
-          children: [
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(60),
-                border: Border.all(color: Colors.grey[300]!, width: 2),
-              ),
-              child: _profileImage != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(60),
-                      child: Image.file(
-                        _profileImage!,
-                        fit: BoxFit.cover,
-                      ),
-                    )
-                  : Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryAccent,
-                        borderRadius: BorderRadius.circular(60),
-                      ),
-                      child: organization != null && organization['name'] != null
-                          ? Center(
-                              child: Text(
-                                organization['name']!.toString().substring(0, 1).toUpperCase(),
-                                style: AppTextStyles.h1.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 48,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            )
-                          : Icon(
-                              Icons.person,
-                              size: 60,
-                              color: Colors.white,
-                            ),
-                    ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        // Upload Photo Button
-        TextButton.icon(
-          onPressed: _pickImage,
-          icon: Icon(
-            Icons.cloud_upload,
-            color: AppColors.primaryAccent,
-            size: 20,
-          ),
-          label: Text(
-            'Upload Photo',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.primaryAccent,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          ),
-        ),
-      ],
-    );
-  }
-
-
-  Widget _buildTextField(String label, TextEditingController controller, 
-      {TextInputType? keyboardType}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.secondaryText,
+            color: required ? AppColors.primaryAccent : AppColors.secondaryText,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -310,52 +257,174 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           controller: controller,
           keyboardType: keyboardType,
           decoration: InputDecoration(
-            hintText: controller.text.isEmpty ? label : null,
+            hintText: controller.text.isEmpty ? label.replaceAll(' *', '') : null,
             hintStyle: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.tertiaryText,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.dividerColor),
+              borderSide: BorderSide(
+                color: hasError ? Colors.red : AppColors.dividerColor,
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.dividerColor),
+              borderSide: BorderSide(
+                color: hasError ? Colors.red : AppColors.dividerColor,
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.primaryAccent, width: 2),
+              borderSide: BorderSide(
+                color: hasError ? Colors.red : AppColors.primaryAccent, 
+                width: 2,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             filled: true,
             fillColor: Colors.white,
+            errorText: _validationErrors[fieldKey],
           ),
           style: AppTextStyles.bodyMedium,
+          validator: required ? (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'This field is required';
+            }
+            return null;
+          } : null,
         ),
       ],
     );
   }
 
-  Future<void> _pickImage() async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 80,
-      );
-      
-      if (image != null) {
-        setState(() {
-          _profileImage = File(image.path);
-        });
-      }
-    } catch (e) {
-      AppComponents.showErrorSnackbar(
-        context, 
-        'Failed to pick image: $e'
-      );
-    }
+  Widget _buildSaveButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _saving ? null : _saveCompanyDetails,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primaryAccent,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        child: _saving
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Text(
+                'SAVE CHANGES',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+      ),
+    );
   }
 
+  Future<void> _saveCompanyDetails() async {
+    // Clear previous validation errors
+    setState(() {
+      _validationErrors = {};
+    });
+
+    // Validate form
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+    });
+
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final organization = authProvider.organization;
+      
+      if (organization == null || organization['id'] == null) {
+        throw 'Company information not found';
+      }
+
+      final companyId = organization['id'];
+      final userId = authProvider.user?.id;
+      
+      if (userId == null) {
+        throw 'User not authenticated';
+      }
+
+      // Check if user can update company details
+      final canUpdate = await _companyService.canUpdateCompanyDetails(userId, companyId);
+      if (!canUpdate) {
+        throw 'You do not have permission to update company details';
+      }
+
+      // Prepare company data
+      final companyData = {
+        'name': _nameController.text.trim(),
+        'legal_name': _legalNameController.text.trim().isEmpty ? null : _legalNameController.text.trim(),
+        'gst_number': _gstController.text.trim().isEmpty ? null : _gstController.text.trim().toUpperCase(),
+        'pan_number': _panController.text.trim().isEmpty ? null : _panController.text.trim().toUpperCase(),
+        'cin_number': _cinController.text.trim().isEmpty ? null : _cinController.text.trim().toUpperCase(),
+        'email': _emailController.text.trim().isEmpty ? null : _emailController.text.trim().toLowerCase(),
+        'phone': _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+        'address_line1': _addressLine1Controller.text.trim().isEmpty ? null : _addressLine1Controller.text.trim(),
+        'address_line2': _addressLine2Controller.text.trim().isEmpty ? null : _addressLine2Controller.text.trim(),
+        'city': _cityController.text.trim().isEmpty ? null : _cityController.text.trim(),
+        'state': _stateController.text.trim().isEmpty ? null : _stateController.text.trim(),
+        'postal_code': _postalCodeController.text.trim().isEmpty ? null : _postalCodeController.text.trim(),
+        'country': _countryController.text.trim().isEmpty ? 'India' : _countryController.text.trim(),
+      };
+
+      // Validate data
+      final validationErrors = _companyService.validateCompanyData(companyData);
+      if (validationErrors.isNotEmpty) {
+        setState(() {
+          _validationErrors = validationErrors;
+        });
+        return;
+      }
+
+      // Update company details
+      await _companyService.updateCompanyDetails(
+        companyId: companyId,
+        companyData: companyData,
+      );
+
+      // Refresh auth provider data
+      await authProvider.recheckAuthorization();
+
+      if (mounted) {
+        AppComponents.showSuccessSnackbar(
+          context,
+          'Company details updated successfully',
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        AppComponents.showErrorSnackbar(
+          context,
+          'Failed to update company details: $e',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+        });
+      }
+    }
+  }
 }

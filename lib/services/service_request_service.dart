@@ -55,19 +55,8 @@ class ServiceRequestService {
           .map<ServiceRequest>((json) => ServiceRequest.fromJson(json))
           .toList();
 
-      // Fetch engineer details for each request
-      for (int i = 0; i < serviceRequests.length; i++) {
-        if (serviceRequests[i].serviceEngineer != null) {
-          final engineerDetails = await _getEngineerDetails(serviceRequests[i].serviceEngineer!);
-          if (engineerDetails != null) {
-            serviceRequests[i] = serviceRequests[i].copyWith(
-              engineerName: engineerDetails['name'],
-              engineerEmail: engineerDetails['email'],
-              engineerPhone: engineerDetails['contact_number'],
-            );
-          }
-        }
-      }
+      // Efficiently fetch all engineer details in a single query
+      await _enrichWithEngineerDetails(serviceRequests);
 
       return serviceRequests;
     } catch (e) {
@@ -93,19 +82,8 @@ class ServiceRequestService {
           .map<ServiceRequest>((json) => ServiceRequest.fromJson(json))
           .toList();
 
-      // Fetch engineer details for each request
-      for (int i = 0; i < serviceRequests.length; i++) {
-        if (serviceRequests[i].serviceEngineer != null) {
-          final engineerDetails = await _getEngineerDetails(serviceRequests[i].serviceEngineer!);
-          if (engineerDetails != null) {
-            serviceRequests[i] = serviceRequests[i].copyWith(
-              engineerName: engineerDetails['name'],
-              engineerEmail: engineerDetails['email'],
-              engineerPhone: engineerDetails['contact_number'],
-            );
-          }
-        }
-      }
+      // Efficiently fetch all engineer details in a single query
+      await _enrichWithEngineerDetails(serviceRequests);
 
       return serviceRequests;
     } catch (e) {
@@ -127,21 +105,12 @@ class ServiceRequestService {
           .eq('id', id)
           .single();
 
-      ServiceRequest serviceRequest = ServiceRequest.fromJson(response);
-
-      // Fetch engineer details if assigned
-      if (serviceRequest.serviceEngineer != null) {
-        final engineerDetails = await _getEngineerDetails(serviceRequest.serviceEngineer!);
-        if (engineerDetails != null) {
-          serviceRequest = serviceRequest.copyWith(
-            engineerName: engineerDetails['name'],
-            engineerEmail: engineerDetails['email'],
-            engineerPhone: engineerDetails['contact_number'],
-          );
-        }
-      }
-
-      return serviceRequest;
+      List<ServiceRequest> serviceRequests = [ServiceRequest.fromJson(response)];
+      
+      // Efficiently fetch engineer details
+      await _enrichWithEngineerDetails(serviceRequests);
+      
+      return serviceRequests.first;
     } catch (e) {
       print('Error fetching service request: $e');
       return null;
@@ -161,21 +130,12 @@ class ServiceRequestService {
           .eq('ticket_no', ticketNo)
           .single();
 
-      ServiceRequest serviceRequest = ServiceRequest.fromJson(response);
-
-      // Fetch engineer details if assigned
-      if (serviceRequest.serviceEngineer != null) {
-        final engineerDetails = await _getEngineerDetails(serviceRequest.serviceEngineer!);
-        if (engineerDetails != null) {
-          serviceRequest = serviceRequest.copyWith(
-            engineerName: engineerDetails['name'],
-            engineerEmail: engineerDetails['email'],
-            engineerPhone: engineerDetails['contact_number'],
-          );
-        }
-      }
-
-      return serviceRequest;
+      List<ServiceRequest> serviceRequests = [ServiceRequest.fromJson(response)];
+      
+      // Efficiently fetch engineer details
+      await _enrichWithEngineerDetails(serviceRequests);
+      
+      return serviceRequests.first;
     } catch (e) {
       print('Error fetching service request by ticket number: $e');
       return null;
@@ -319,9 +279,12 @@ class ServiceRequestService {
 
       final response = await query.order('date_of_request', ascending: false);
 
-      var serviceRequests = response
+      List<ServiceRequest> serviceRequests = response
           .map<ServiceRequest>((json) => ServiceRequest.fromJson(json))
           .toList();
+
+      // Efficiently fetch all engineer details in a single query
+      await _enrichWithEngineerDetails(serviceRequests);
 
       // Apply text search filter if provided
       if (searchQuery != null && searchQuery.isNotEmpty) {
@@ -375,9 +338,14 @@ class ServiceRequestService {
           .order('date_of_request', ascending: false)
           .range(offset, offset + limit - 1);
 
-      return response
+      List<ServiceRequest> serviceRequests = response
           .map<ServiceRequest>((json) => ServiceRequest.fromJson(json))
           .toList();
+
+      // Efficiently fetch all engineer details in a single query
+      await _enrichWithEngineerDetails(serviceRequests);
+
+      return serviceRequests;
     } catch (e) {
       print('Error fetching device service requests: $e');
       return [];
@@ -399,44 +367,83 @@ class ServiceRequestService {
     }
   }
 
-  /// Get engineer details by engineer ID or email
-  Future<Map<String, dynamic>?> _getEngineerDetails(String engineerIdentifier) async {
-    try {
-      // Try to find engineer by ID first (UUID format)
-      if (_isValidUUID(engineerIdentifier)) {
-        var response = await _supabase
-            .from('service_engineers')
-            .select('name, email, contact_number, expertise, comments')
-            .eq('id', engineerIdentifier)
-            .maybeSingle();
+  /// Efficiently enrich service requests with engineer details
+  Future<void> _enrichWithEngineerDetails(List<ServiceRequest> serviceRequests) async {
+    if (serviceRequests.isEmpty) return;
 
-        if (response != null) {
-          return response;
+    try {
+      // Extract unique engineer identifiers
+      final engineerIdentifiers = serviceRequests
+          .where((req) => req.serviceEngineer != null && req.serviceEngineer!.isNotEmpty)
+          .map((req) => req.serviceEngineer!)
+          .toSet()
+          .toList();
+
+      if (engineerIdentifiers.isEmpty) return;
+
+      // Fetch all engineers in a single query
+      Map<String, Map<String, dynamic>> engineerMap = {};
+
+      // Try to fetch by ID first (for UUIDs)
+      final uuidIdentifiers = engineerIdentifiers.where(_isValidUUID).toList();
+      if (uuidIdentifiers.isNotEmpty) {
+        final uuidResponse = await _supabase
+            .from('service_engineers')
+            .select('id, name, email, contact_number, expertise, comments')
+            .inFilter('id', uuidIdentifiers);
+
+        for (final engineer in uuidResponse) {
+          engineerMap[engineer['id']] = engineer;
         }
       }
 
-      // If not found by ID or not a valid UUID, try by email
-      var response = await _supabase
-          .from('service_engineers')
-          .select('name, email, contact_number, expertise, comments')
-          .eq('email', engineerIdentifier)
-          .maybeSingle();
+      // Try to fetch by email for remaining identifiers
+      final emailIdentifiers = engineerIdentifiers
+          .where((id) => !engineerMap.containsKey(id) && id.contains('@'))
+          .toList();
+      if (emailIdentifiers.isNotEmpty) {
+        final emailResponse = await _supabase
+            .from('service_engineers')
+            .select('id, name, email, contact_number, expertise, comments')
+            .inFilter('email', emailIdentifiers);
 
-      if (response != null) {
-        return response;
+        for (final engineer in emailResponse) {
+          engineerMap[engineer['email']] = engineer;
+        }
       }
 
-      // If still not found, try by name (partial match)
-      response = await _supabase
-          .from('service_engineers')
-          .select('name, email, contact_number, expertise, comments')
-          .ilike('name', '%$engineerIdentifier%')
-          .maybeSingle();
+      // Try to fetch by name for remaining identifiers
+      final nameIdentifiers = engineerIdentifiers
+          .where((id) => !engineerMap.containsKey(id) && !id.contains('@') && !_isValidUUID(id))
+          .toList();
+      if (nameIdentifiers.isNotEmpty) {
+        for (final nameId in nameIdentifiers) {
+          final nameResponse = await _supabase
+              .from('service_engineers')
+              .select('id, name, email, contact_number, expertise, comments')
+              .ilike('name', '%$nameId%')
+              .limit(1);
 
-      return response;
+          if (nameResponse.isNotEmpty) {
+            engineerMap[nameId] = nameResponse.first;
+          }
+        }
+      }
+
+      // Update service requests with engineer details
+      for (int i = 0; i < serviceRequests.length; i++) {
+        final serviceEngineer = serviceRequests[i].serviceEngineer;
+        if (serviceEngineer != null && engineerMap.containsKey(serviceEngineer)) {
+          final engineerDetails = engineerMap[serviceEngineer]!;
+          serviceRequests[i] = serviceRequests[i].copyWith(
+            engineerName: engineerDetails['name'],
+            engineerEmail: engineerDetails['email'],
+            engineerPhone: engineerDetails['contact_number'],
+          );
+        }
+      }
     } catch (e) {
-      print('Error fetching engineer details: $e');
-      return null;
+      print('Error enriching service requests with engineer details: $e');
     }
   }
 

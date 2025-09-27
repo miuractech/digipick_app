@@ -790,8 +790,10 @@ class ServiceRequestDetailModal extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Container(
+        const SizedBox(height: 16),
+        GestureDetector(
+          onTap: () => _viewAttachment(request.uploadedFileUrl!),
+          child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AppColors.backgroundColor,
@@ -828,6 +830,62 @@ class ServiceRequestDetailModal extends StatelessWidget {
               ],
             ),
           ),
+        ),
+        // Image preview for image files
+        if (request.uploadedReference == 'image') ...[
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => _viewAttachment(request.uploadedFileUrl!),
+            child: Container(
+              height: 150,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: AppColors.backgroundColor,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.dividerColor),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  request.uploadedFileUrl!,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            color: AppColors.tertiaryText,
+                            size: 48,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Unable to load image',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.tertiaryText,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
         ],
       ),
     );
@@ -969,6 +1027,13 @@ class ServiceRequestDetailModal extends StatelessWidget {
       if (await canLaunchUrl(Uri.parse(phoneNumber))) {
         await launchUrl(Uri.parse(phoneNumber));
       }
+    }
+  }
+
+  Future<void> _viewAttachment(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 

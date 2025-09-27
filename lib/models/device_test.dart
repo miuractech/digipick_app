@@ -3,6 +3,7 @@ class DeviceTest {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String folderName;
+  final String? pdfUrl;
   final List<String> images;
   final String? deviceId;
   final String? deviceName;
@@ -21,6 +22,7 @@ class DeviceTest {
     required this.createdAt,
     required this.updatedAt,
     required this.folderName,
+    this.pdfUrl,
     required this.images,
     this.deviceId,
     this.deviceName,
@@ -41,6 +43,7 @@ class DeviceTest {
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
       folderName: json['folder_name'],
+      pdfUrl: json['pdf_url'],
       images: List<String>.from(json['images'] ?? []),
       deviceId: json['device_id'],
       deviceName: json['device_name'],

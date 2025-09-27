@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/device_test.dart';
 import '../services/auth_service.dart';
+import '../services/download_service.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_components.dart';
@@ -332,33 +333,31 @@ class _ReportsPageState extends State<ReportsPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            // TODO: Implement download functionality
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Download functionality will be implemented')),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4CAF50),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                      // Only show download button if PDF URL exists
+                      if (_isPdfAvailable(report)) ...[
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => _downloadPdf(report, context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4CAF50),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 0,
                             ),
-                            elevation: 0,
-                          ),
-                          child: const Text(
-                            'Download',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                            child: const Text(
+                              'Download',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ],
@@ -376,6 +375,39 @@ class _ReportsPageState extends State<ReportsPage> {
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
     return months[month];
+  }
+
+  /// Checks if PDF is available for the given report
+  bool _isPdfAvailable(DeviceTest report) {
+    return report.pdfUrl != null && report.pdfUrl!.isNotEmpty;
+  }
+
+  /// Downloads the PDF report for the given device test
+  Future<void> _downloadPdf(DeviceTest report, BuildContext context) async {
+    final pdfUrl = report.pdfUrl;
+    
+    if (pdfUrl == null || pdfUrl.isEmpty) {
+      AppComponents.showErrorSnackbar(
+        context,
+        'PDF not available for this report',
+      );
+      return;
+    }
+
+    // Generate a meaningful filename
+    final timestamp = report.testDate != null 
+        ? "${report.testDate!.day.toString().padLeft(2, '0')}-${report.testDate!.month.toString().padLeft(2, '0')}-${report.testDate!.year}"
+        : DateTime.now().toString().substring(0, 10);
+    
+    final deviceName = (report.deviceName ?? 'unknown').replaceAll(' ', '_').toLowerCase();
+    final fileName = 'Report_${deviceName}_${timestamp}_${report.id.substring(0, 8)}';
+
+    // Download the PDF
+    await DownloadService.downloadPdf(
+      pdfUrl: pdfUrl,
+      fileName: fileName,
+      context: context,
+    );
   }
 }
 

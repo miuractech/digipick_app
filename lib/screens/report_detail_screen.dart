@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/device_test.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_components.dart';
+import '../services/download_service.dart';
 
 class ReportDetailScreen extends StatelessWidget {
   final DeviceTest report;
@@ -17,22 +18,32 @@ class ReportDetailScreen extends StatelessWidget {
           AppComponents.universalHeader(
             showBackButton: true,
             onBackPressed: () => Navigator.pop(context),
-            actions: [
-              ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Implement download functionality
-                },
-                icon: const Icon(Icons.download, size: 20),
-                label: const Text('Download'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryAccent,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppBorderRadius.button,
+            actions: _isPdfAvailable() ? [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryAccent,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  onPressed: () => _downloadPdf(context),
+                  icon: const Icon(
+                    Icons.download,
+                    size: 20,
+                    color: Colors.white,
                   ),
+                  padding: EdgeInsets.zero,
                 ),
               ),
-            ],
+            ] : [],
           ),
           Expanded(
             child: SingleChildScrollView(
@@ -539,5 +550,38 @@ class ReportDetailScreen extends StatelessWidget {
       }
     }
     return {'warpA': '0', 'warpB': '0', 'total': '0'};
+  }
+
+  /// Checks if PDF is available for this report
+  bool _isPdfAvailable() {
+    return report.pdfUrl != null && report.pdfUrl!.isNotEmpty;
+  }
+
+  /// Downloads the PDF report for this device test
+  Future<void> _downloadPdf(BuildContext context) async {
+    final pdfUrl = report.pdfUrl;
+    
+    if (pdfUrl == null || pdfUrl.isEmpty) {
+      AppComponents.showErrorSnackbar(
+        context,
+        'PDF not available for this report',
+      );
+      return;
+    }
+
+    // Generate a meaningful filename
+    final timestamp = report.testDate != null 
+        ? "${report.testDate!.day.toString().padLeft(2, '0')}-${report.testDate!.month.toString().padLeft(2, '0')}-${report.testDate!.year}"
+        : DateTime.now().toString().substring(0, 10);
+    
+    final deviceName = _getDeviceName().replaceAll(' ', '_').toLowerCase();
+    final fileName = 'Report_${deviceName}_${timestamp}_${report.id.substring(0, 8)}';
+
+    // Download the PDF
+    await DownloadService.downloadPdf(
+      pdfUrl: pdfUrl,
+      fileName: fileName,
+      context: context,
+    );
   }
 }
