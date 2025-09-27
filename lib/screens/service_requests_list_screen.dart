@@ -540,6 +540,7 @@ class _ServiceRequestsListScreenState extends State<ServiceRequestsListScreen> {
           ],
         ],
       ),
+    )
     );
   }
 

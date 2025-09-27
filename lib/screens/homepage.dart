@@ -1,3 +1,4 @@
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -10,6 +11,97 @@ import 'home_screen.dart';
 import 'add_device_screen.dart';
 import 'service_request_screen.dart';
 import 'device_statistics_screen.dart';
+
+// --- ImageCarousel Widget ---
+class ImageCarousel extends StatefulWidget {
+  const ImageCarousel({super.key});
+
+  @override
+  State<ImageCarousel> createState() => _ImageCarouselState();
+}
+
+class _ImageCarouselState extends State<ImageCarousel> {
+  int _current = 0;
+
+  final List<String> imgList = [
+    'lib/assets/banner.jpg', // keep your current lib/assets path
+    'lib/assets/banner.jpg',
+    'lib/assets/banner.jpg',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    // Screen width
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Dynamic height: adjust the multiplier as needed
+    final carouselHeight = screenWidth * 0.5; 
+
+    return Column(
+      children: [
+        SizedBox(
+          width: screenWidth - 32, 
+          height: carouselHeight,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: CarouselSlider(
+              options: CarouselOptions(
+                autoPlay: true,
+                enlargeCenterPage: false,
+                viewportFraction: 1.0,
+                height: carouselHeight,
+                autoPlayInterval: const Duration(seconds: 4),
+                onPageChanged: (index, reason) {
+                  setState(() {
+                    _current = index;
+                  });
+                },
+              ),
+              items: imgList.map((item) {
+                return Image.asset(
+                  item,
+                  width: screenWidth,
+                  height: carouselHeight,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      Container(
+                        width: screenWidth,
+                        height: carouselHeight,
+                        color: Colors.grey,
+                        child: const Center(child: Text("Banner")),
+                      ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: imgList.asMap().entries.map((entry) {
+            return GestureDetector(
+              onTap: () {
+                // Optional: animate to page if you want
+              },
+              child: Container(
+                width: 8.0,
+                height: 8.0,
+                margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _current == entry.key
+                      ? Colors.black
+                      : Colors.grey.withOpacity(0.5),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -40,48 +132,7 @@ class _HomepageState extends State<Homepage> {
         child: Column(
           children: [
             AppComponents.universalHeader(),
-                  // Banner section
-                  Container(
-              width: double.infinity,
-              height: 200,
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.asset(
-                  'lib/assets/banner.jpg',
-                
-                  fit: BoxFit.fitWidth,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppColors.primaryAccent, AppColors.secondaryAccent],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'QCVATION®\nLeading the way in\nQuality Control\nSolutions',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-            
+            ImageCarousel(),
             // Statistics cards (only for managers)
             if (authProvider.hasManagerRole) ...[
               Container(
