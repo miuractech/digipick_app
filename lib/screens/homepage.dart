@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/auth_service.dart';
+import '../services/service_request_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_components.dart';
 import 'reports_page.dart';
 import 'stats_page.dart';
-import 'home_screen.dart';
 import 'add_device_screen.dart';
 import 'service_request_screen.dart';
 import 'device_statistics_screen.dart';
+import 'home_screen.dart';
+import 'care_page.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -20,9 +22,11 @@ class Homepage extends StatefulWidget {
 
 class _HomepageState extends State<Homepage> {
   final AuthService _authService = AuthService();
+  final ServiceRequestService _serviceRequestService = ServiceRequestService();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isSearching = false;
+  String? _activeFilter; // Track active filter: 'warranty', 'amc', or null
   
   @override
   void dispose() {
@@ -94,40 +98,84 @@ class _HomepageState extends State<Homepage> {
             // Instruments section header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
                 children: [
-                  const Text(
-                    'Instruments (Devices)',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
-                  ),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildIconButton(
-                        icon: _isSearching ? Icons.close : Icons.search,
-                        onPressed: () {
-                          setState(() {
-                            _isSearching = !_isSearching;
-                            if (!_isSearching) {
-                              _searchController.clear();
-                              _searchQuery = '';
-                            }
-                          });
-                        },
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            FutureBuilder<List<Map<String, dynamic>>>(
+                              future: authProvider.user != null 
+                                  ? _authService.getDevicesForUser(authProvider.user!.id)
+                                  : Future.value([]),
+                              builder: (context, snapshot) {
+                                final deviceCount = snapshot.hasData ? snapshot.data!.length : 0;
+                                return Text(
+                                  'Instruments ($deviceCount)',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black,
+                                  ),
+                                );
+                              },
+                            ),
+                            if (_activeFilter != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Filtered by: ${_getFilterDisplayName(_activeFilter!)}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.primaryAccent,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 12),
-                      _buildIconButton(
-                        icon: Icons.refresh,
-                        onPressed: () {
-                          setState(() {
-                            _searchQuery = '';
-                            _searchController.clear();
-                          });
-                        },
+                      Row(
+                        children: [
+                          if (_activeFilter != null) ...[
+                            _buildIconButton(
+                              icon: Icons.clear,
+                              onPressed: () {
+                                setState(() {
+                                  _activeFilter = null;
+                                });
+                              },
+                              backgroundColor: AppColors.primaryAccent.withOpacity(0.1),
+                              iconColor: AppColors.primaryAccent,
+                            ),
+                            const SizedBox(width: 12),
+                          ],
+                          _buildIconButton(
+                            icon: _isSearching ? Icons.close : Icons.search,
+                            onPressed: () {
+                              setState(() {
+                                _isSearching = !_isSearching;
+                                if (!_isSearching) {
+                                  _searchController.clear();
+                                  _searchQuery = '';
+                                }
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 12),
+                          _buildIconButton(
+                            icon: Icons.refresh,
+                            onPressed: () {
+                              setState(() {
+                                _searchQuery = '';
+                                _searchController.clear();
+                                _activeFilter = null;
+                              });
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -182,7 +230,7 @@ class _HomepageState extends State<Homepage> {
     if (authProvider.organization == null) {
       return Row(
         children: [
-          Expanded(child: _buildStatCard('0', 'Total\nDevices', 'total_devices')),
+          Expanded(child: _buildStatCard('0', 'Under\nWarranty', 'warranty')),
           const SizedBox(width: 12),
           Expanded(child: _buildStatCard('0', 'AMC\nActive', 'amc_active')),
           const SizedBox(width: 12),
@@ -191,13 +239,13 @@ class _HomepageState extends State<Homepage> {
       );
     }
 
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _authService.getDevicesForUser(authProvider.user!.id),
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _getStatisticsData(authProvider),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Row(
             children: [
-              Expanded(child: _buildStatCard('...', 'Total\nDevices', 'total_devices')),
+              Expanded(child: _buildStatCard('...', 'Under\nWarranty', 'warranty')),
               const SizedBox(width: 12),
               Expanded(child: _buildStatCard('...', 'AMC\nActive', 'amc_active')),
               const SizedBox(width: 12),
@@ -206,48 +254,102 @@ class _HomepageState extends State<Homepage> {
           );
         }
 
-        final devices = snapshot.data ?? [];
-        final totalDevices = devices.length;
-        
-        // Calculate AMC active devices
-        final now = DateTime.now();
-        final amcActiveDevices = devices.where((device) {
-          if (device['amc_end_date'] == null) return false;
-          try {
-            final amcEndDate = DateTime.parse(device['amc_end_date']);
-            return amcEndDate.isAfter(now);
-          } catch (e) {
-            return false;
-          }
-        }).length;
-
-        // For service requests, we'll use 0 for now as there's no service request data structure
-        final serviceRequests = 0;
+        final data = snapshot.data ?? {};
+        final devicesUnderWarranty = data['devicesUnderWarranty'] ?? 0;
+        final amcActiveDevices = data['amcActiveDevices'] ?? 0;
+        final serviceRequestsCount = data['serviceRequestsCount'] ?? 0;
 
         return Row(
           children: [
-            Expanded(child: _buildStatCard(totalDevices.toString(), 'Total\nDevices', 'total_devices')),
+            Expanded(child: _buildStatCard(devicesUnderWarranty.toString(), ' Under\nWarranty', 'warranty')),
             const SizedBox(width: 12),
             Expanded(child: _buildStatCard(amcActiveDevices.toString(), 'AMC\nActive', 'amc_active')),
             const SizedBox(width: 12),
-            Expanded(child: _buildStatCard(serviceRequests.toString(), 'Service\nRequest', 'service_request')),
+            Expanded(child: _buildStatCard(serviceRequestsCount.toString(), 'Service\nRequest', 'service_request')),
           ],
         );
       },
     );
   }
 
+  Future<Map<String, dynamic>> _getStatisticsData(AuthProvider authProvider) async {
+    try {
+      final devices = await _authService.getDevicesForUser(authProvider.user!.id);
+      final now = DateTime.now();
+      
+      // Calculate devices under warranty
+      final devicesUnderWarranty = devices.where((device) {
+        if (device['warranty_expiry_date'] == null) return false;
+        try {
+          final warrantyEndDate = DateTime.parse(device['warranty_expiry_date']);
+          return warrantyEndDate.isAfter(now);
+        } catch (e) {
+          return false;
+        }
+      }).length;
+      
+      // Calculate AMC active devices
+      final amcActiveDevices = devices.where((device) {
+        if (device['amc_end_date'] == null) return false;
+        try {
+          final amcEndDate = DateTime.parse(device['amc_end_date']);
+          return amcEndDate.isAfter(now);
+        } catch (e) {
+          return false;
+        }
+      }).length;
+
+      // Calculate service requests count
+      int serviceRequestsCount = 0;
+      if (authProvider.organization != null) {
+        try {
+          final stats = await _serviceRequestService.getServiceRequestStats(authProvider.organization!['id']);
+          serviceRequestsCount = stats['total'] ?? 0;
+        } catch (e) {
+          serviceRequestsCount = 0;
+        }
+      }
+
+      return {
+        'devicesUnderWarranty': devicesUnderWarranty,
+        'amcActiveDevices': amcActiveDevices,
+        'serviceRequestsCount': serviceRequestsCount,
+      };
+    } catch (e) {
+      return {
+        'devicesUnderWarranty': 0,
+        'amcActiveDevices': 0,
+        'serviceRequestsCount': 0,
+      };
+    }
+  }
+
   Widget _buildStatCard(String number, String label, String statisticsType) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isActive = _activeFilter == statisticsType;
+    
     return GestureDetector(
       onTap: authProvider.hasManagerRole 
-          ? () => _navigateToDeviceStatistics(context, statisticsType, label.replaceAll('\n', ' '))
+          ? () {
+              if (statisticsType == 'service_request') {
+                // Navigate to device statistics screen for service request
+                _navigateToDeviceStatistics(context, statisticsType, label.replaceAll('\n', ' '));
+              } else {
+                // Apply filter for warranty and AMC cards
+                setState(() {
+                  _activeFilter = isActive ? null : statisticsType;
+                });
+              }
+            }
           : null,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isActive ? AppColors.primaryAccent.withOpacity(0.1) : Colors.white,
           borderRadius: BorderRadius.circular(12),
+          border: isActive 
+              ? Border.all(color: AppColors.primaryAccent, width: 2)
+              : null,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -260,19 +362,19 @@ class _HomepageState extends State<Homepage> {
           children: [
             Text(
               number,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: isActive ? AppColors.primaryAccent : Colors.black,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               label,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Colors.black54,
+                color: isActive ? AppColors.primaryAccent : Colors.black54,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -325,21 +427,66 @@ class _HomepageState extends State<Homepage> {
           );
         }
 
-        final devices = snapshot.data ?? [];
+        final allDevices = snapshot.data ?? [];
+        
+        // Apply filtering based on active filter
+        final filteredDevices = _filterDevices(allDevices);
 
-        if (devices.isEmpty) {
+        if (filteredDevices.isEmpty) {
+          String emptyMessage = 'No devices found';
+          if (_activeFilter == 'warranty') {
+            emptyMessage = 'No devices under warranty found';
+          } else if (_activeFilter == 'amc_active') {
+            emptyMessage = 'No devices with active AMC found';
+          }
+          
           return AppComponents.emptyState(
             icon: Icons.devices_outlined,
-            title: 'No devices found',
-            subtitle: 'No devices registered for this organization',
+            title: emptyMessage,
+            subtitle: _activeFilter != null 
+                ? 'Try removing the filter to see all devices'
+                : 'No devices registered for this organization',
           );
         }
 
         return Column(
-          children: devices.map((device) => _buildDeviceCard(context, device)).toList(),
+          children: filteredDevices.map((device) => _buildDeviceCard(context, device)).toList(),
         );
       },
     );
+  }
+
+  List<Map<String, dynamic>> _filterDevices(List<Map<String, dynamic>> devices) {
+    if (_activeFilter == null) {
+      return devices;
+    }
+
+    final now = DateTime.now();
+    
+    return devices.where((device) {
+      switch (_activeFilter) {
+        case 'warranty':
+          // Filter devices under warranty
+          if (device['warranty_expiry_date'] == null) return false;
+          try {
+            final warrantyEndDate = DateTime.parse(device['warranty_expiry_date']);
+            return warrantyEndDate.isAfter(now);
+          } catch (e) {
+            return false;
+          }
+        case 'amc_active':
+          // Filter devices with active AMC
+          if (device['amc_end_date'] == null) return false;
+          try {
+            final amcEndDate = DateTime.parse(device['amc_end_date']);
+            return amcEndDate.isAfter(now);
+          } catch (e) {
+            return false;
+          }
+        default:
+          return true;
+      }
+    }).toList();
   }
 
   Widget _buildDeviceCard(BuildContext context, Map<String, dynamic> device) {
@@ -350,6 +497,12 @@ class _HomepageState extends State<Homepage> {
         ? DateTime.parse(device['amc_end_date']) 
         : null;
     final isAmcActive = amcEndDate != null && amcEndDate.isAfter(now);
+    
+    // Calculate warranty status
+    final warrantyEndDate = device['warranty_expiry_date'] != null 
+        ? DateTime.parse(device['warranty_expiry_date']) 
+        : null;
+    final isWarrantyActive = warrantyEndDate != null && warrantyEndDate.isAfter(now);
     
     
     return GestureDetector(
@@ -496,6 +649,36 @@ class _HomepageState extends State<Homepage> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 8),
+                      
+                      // Warranty Status
+                      Row(
+                        children: [
+                          const Text(
+                            'Warranty Status : ',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isWarrantyActive ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              isWarrantyActive ? 'Active' : 'Expired',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -538,7 +721,7 @@ class _HomepageState extends State<Homepage> {
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => _navigateToCare(context),
+                    onTap: () => _navigateToCare(context, device),
                     child: Container(
                       margin: const EdgeInsets.only(left: 16),
                       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -596,6 +779,19 @@ class _HomepageState extends State<Homepage> {
     );
   }
 
+  String _getFilterDisplayName(String filterType) {
+    switch (filterType) {
+      case 'warranty':
+        return 'Devices Under Warranty';
+      case 'amc_active':
+        return 'AMC Active';
+      case 'service_request':
+        return 'Service Request';
+      default:
+        return filterType;
+    }
+  }
+
   void _navigateToReports(BuildContext context, Map<String, dynamic> device) {
     Navigator.push(
       context,
@@ -605,12 +801,12 @@ class _HomepageState extends State<Homepage> {
     );
   }
 
-  void _navigateToCare(BuildContext context) {
-    // Navigate to HomeScreen with Care tab selected
+  void _navigateToCare(BuildContext context, Map<String, dynamic> device) {
+    // Navigate to the Care tab by replacing the current route
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => const HomeScreen(initialIndex: 1),
+        builder: (context) => const HomeScreen(initialIndex: 1), // Care tab index
       ),
     );
   }
@@ -643,15 +839,26 @@ class _HomepageState extends State<Homepage> {
   }
 
   void _navigateToDeviceStatistics(BuildContext context, String statisticsType, String title) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DeviceStatisticsScreen(
-          statisticsType: statisticsType,
-          title: title,
+    // For service requests, navigate to CarePage to show all service requests
+    if (statisticsType == 'service_request') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const CarePage(),
         ),
-      ),
-    );
+      );
+    } else {
+      // For other statistics types, push a new screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DeviceStatisticsScreen(
+            statisticsType: statisticsType,
+            title: title,
+          ),
+        ),
+      );
+    }
   }
 
 }

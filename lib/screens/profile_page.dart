@@ -177,6 +177,27 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                         ),
+                        // Add phone number if available
+                        if (organization != null && organization['phone'] != null && organization['phone'].toString().trim().isNotEmpty) ...[
+                          const SizedBox(height: 18),
+                          _buildAccountDetail(
+                            Icons.phone,
+                            organization['phone'],
+                            null,
+                          ),
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 40),
+                            child: Text(
+                              'Primary Contact Phone',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.tertiaryText,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w300,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

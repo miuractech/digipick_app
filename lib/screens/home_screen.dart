@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import 'homepage.dart';
-import 'care_page.dart';
+import 'care_tab_screen.dart';
 import 'shop_page.dart';
 import 'profile_page.dart';
 
@@ -29,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (isManager) {
       return [
         Homepage(),
-        const CarePage(),
+        const CareTabScreen(),
         const ShopPage(),
         const ProfilePage(),
       ];

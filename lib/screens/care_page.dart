@@ -208,7 +208,10 @@ class _CarePageState extends State<CarePage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppComponents.universalHeader(),
+          AppComponents.universalHeader(
+            showBackButton: true,
+            onBackPressed: () => Navigator.pop(context),
+          ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -277,54 +280,6 @@ class _CarePageState extends State<CarePage> {
           border: InputBorder.none,
         ),
       ),
-    );
-  }
-
-
-  Widget _buildResultsHeader() {
-    int totalCount = _allServiceRequests.length;
-    int upcomingCount = _upcomingServices.length;
-    int pastCount = _pastServices.length;
-    bool hasFilters = _searchQuery.isNotEmpty || 
-                     _selectedServiceType != null || 
-                     _selectedStatus != null || 
-                     _dateRange != null;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                hasFilters 
-                    ? 'Filtered Results: $totalCount requests'
-                    : '$totalCount total service requests',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.primaryText,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (totalCount > 0) ...[
-                const SizedBox(height: 2),
-                Text(
-                  '$upcomingCount upcoming • $pastCount completed',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.tertiaryText,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        if (_isLoading)
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-      ],
     );
   }
 
