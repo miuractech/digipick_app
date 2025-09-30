@@ -478,7 +478,43 @@ class AppComponents {
     }
   }
 
-  /// Floating Action Button with Expandable Menu
+  /// Simple Floating Action Button for Add Device
+  static Widget addDeviceFAB({
+    required VoidCallback onPressed,
+  }) {
+    return FloatingActionButton(
+      onPressed: onPressed,
+      backgroundColor: AppColors.primaryAccent,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppBorderRadius.fab,
+      ),
+      child: const Icon(
+        Icons.add_circle_outline,
+        color: Colors.white,
+        size: 28,
+      ),
+    );
+  }
+
+  /// Simple Floating Action Button for Service Request
+  static Widget serviceRequestFAB({
+    required VoidCallback onPressed,
+  }) {
+    return FloatingActionButton(
+      onPressed: onPressed,
+      backgroundColor: AppColors.secondaryAccent,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppBorderRadius.fab,
+      ),
+      child: const Icon(
+        Icons.build_outlined,
+        color: Colors.white,
+        size: 28,
+      ),
+    );
+  }
+
+  /// Floating Action Button with Expandable Menu (Deprecated - kept for compatibility)
   static Widget floatingActionButton({
     required VoidCallback onAddDevice,
     required VoidCallback onServiceRequest,

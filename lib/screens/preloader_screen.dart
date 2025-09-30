@@ -47,10 +47,10 @@ class _PreloaderScreenState extends State<PreloaderScreen>
 
   void _startAnimation() async {
     await _animationController.forward();
-    // Navigate to auth wrapper after preloader
+    // Navigate to preloader2 after first preloader
     await Future.delayed(preloaderDuration);
     if (mounted) {
-      Navigator.of(context).pushReplacementNamed('/auth');
+      Navigator.of(context).pushReplacementNamed('/preloader2');
     }
   }
 

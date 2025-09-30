@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'screens/preloader_screen.dart';
+import 'screens/preloader2_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/unauthorized_screen.dart';
@@ -45,6 +46,7 @@ class MyApp extends StatelessWidget {
             home: const PreloaderScreen(),
             routes: {
               '/preloader': (context) => const PreloaderScreen(),
+              '/preloader2': (context) => const Preloader2Screen(),
               '/login': (context) => const LoginScreen(),
               '/home': (context) => const HomeScreen(),
               '/unauthorized': (context) => const UnauthorizedScreen(),

@@ -333,7 +333,7 @@ class _DeviceStatisticsScreenState extends State<DeviceStatisticsScreen>
         ],
         indicatorColor: AppColors.secondaryAccent,
         indicatorWeight: 3,
-        labelColor: AppColors.secondaryAccent,
+        labelColor: AppColors.primaryAccent,
         unselectedLabelColor: AppColors.tertiaryText,
         labelStyle: AppTextStyles.bodyMedium.copyWith(
           fontWeight: FontWeight.w600,

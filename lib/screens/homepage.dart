@@ -9,7 +9,6 @@ import '../theme/app_components.dart';
 import 'reports_page.dart';
 import 'stats_page.dart';
 import 'add_device_screen.dart';
-import 'service_request_screen.dart';
 import 'device_statistics_screen.dart';
 import 'home_screen.dart';
 import 'care_page.dart';
@@ -269,9 +268,8 @@ class _HomepageState extends State<Homepage> {
         ),
       ),
       floatingActionButton: authProvider.hasManagerRole 
-          ? AppComponents.floatingActionButton(
-              onAddDevice: () => _navigateToAddDevice(context),
-              onServiceRequest: () => _navigateToServiceRequest(context),
+          ? AppComponents.addDeviceFAB(
+              onPressed: () => _navigateToAddDevice(context),
             )
           : null,
     );
@@ -880,14 +878,6 @@ class _HomepageState extends State<Homepage> {
     );
   }
 
-  void _navigateToServiceRequest(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const ServiceRequestScreen(),
-      ),
-    );
-  }
 
   void _navigateToDeviceStatistics(BuildContext context, String statisticsType, String title) {
     // For service requests, navigate to CarePage to show all service requests

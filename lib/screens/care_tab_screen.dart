@@ -226,7 +226,7 @@ class _CareTabScreenState extends State<CareTabScreen>
                   ],
                 ),
                 const SizedBox(height: 8),
-                _buildDeviceInfo('Device ID :', device.deviceId),
+                _buildDeviceInfo('Mac Add :', device.deviceId),
                 const SizedBox(height: 4),
                 _buildDeviceInfo('Device Status :', device.deviceStatus),
                 const SizedBox(height: 4),
@@ -242,7 +242,7 @@ class _CareTabScreenState extends State<CareTabScreen>
   Widget _buildDeviceInfo(String label, String value, {DeviceData? device}) {
     Color backgroundColor;
     Color textColor;
-    
+
     if (label.contains('AMC Status') && device != null) {
       if (device.isAmcActive) {
         backgroundColor = Colors.green.shade100;
@@ -265,6 +265,11 @@ class _CareTabScreenState extends State<CareTabScreen>
       textColor = Colors.orange.shade700;
     }
 
+    String displayValue = value;
+    if (value.length > 20) {
+      displayValue = value.substring(0, 20) + '...';
+    }
+
     return Row(
       children: [
         Text(
@@ -281,11 +286,13 @@ class _CareTabScreenState extends State<CareTabScreen>
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            value,
+            displayValue,
             style: AppTextStyles.caption.copyWith(
               color: textColor,
               fontWeight: FontWeight.w600,
             ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
         ),
       ],
@@ -324,7 +331,7 @@ class _CareTabScreenState extends State<CareTabScreen>
         ],
         indicatorColor: AppColors.secondaryAccent,
         indicatorWeight: 3,
-        labelColor: AppColors.secondaryAccent,
+        labelColor: AppColors.primaryAccent,
         unselectedLabelColor: AppColors.tertiaryText,
         labelStyle: AppTextStyles.bodyMedium.copyWith(
           fontWeight: FontWeight.w600,

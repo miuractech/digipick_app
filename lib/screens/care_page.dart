@@ -8,6 +8,7 @@ import '../models/service_request.dart';
 import '../services/service_request_service.dart';
 import '../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
+import 'service_request_screen.dart';
 
 class CarePage extends StatefulWidget {
   const CarePage({super.key});
@@ -239,6 +240,9 @@ class _CarePageState extends State<CarePage> {
           ),
         ],
       ),
+      floatingActionButton: AppComponents.serviceRequestFAB(
+        onPressed: () => _navigateToServiceRequest(context),
+      ),
     );
   }
 
@@ -350,6 +354,15 @@ class _CarePageState extends State<CarePage> {
     return Text(
       title,
       style: AppTextStyles.h3,
+    );
+  }
+
+  void _navigateToServiceRequest(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ServiceRequestScreen(),
+      ),
     );
   }
 
