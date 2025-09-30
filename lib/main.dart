@@ -7,6 +7,7 @@ import 'screens/preloader2_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/unauthorized_screen.dart';
+import 'screens/archived_organization_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -50,6 +51,7 @@ class MyApp extends StatelessWidget {
               '/login': (context) => const LoginScreen(),
               '/home': (context) => const AuthWrapper(),
               '/unauthorized': (context) => const UnauthorizedScreen(),
+              '/archived_organization': (context) => const ArchivedOrganizationScreen(),
               '/auth': (context) => const AuthWrapper(),
             },
             debugShowCheckedModeBanner: false,
@@ -116,7 +118,9 @@ class AuthWrapper extends StatelessWidget {
         }
         
         if (authProvider.isAuthenticated) {
-          if (authProvider.isAuthorized) {
+          if (authProvider.isOrganizationArchived && authProvider.organization != null) {
+            return const ArchivedOrganizationScreen();
+          } else if (authProvider.isAuthorized) {
             return const HomeScreen();
           } else if (authProvider.isLoading) {
             // Show a minimal loading indicator for authorization check

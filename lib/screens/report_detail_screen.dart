@@ -378,11 +378,16 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     final testResults = widget.report.testResults;
     if (testResults == null) return const SizedBox.shrink();
 
+    final imageUrls = _getImageUrls();
+    if (imageUrls.isEmpty) return const SizedBox.shrink();
+
+    final currentReading = _getCurrentImageReading();
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Sample Readings - 1',
+          'Sample Readings - ${_currentImageIndex + 1}',
           style: AppTextStyles.h2,
         ),
         const SizedBox(height: 16),
@@ -395,9 +400,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           ),
           child: Column(
             children: [
-              _buildReadingRow('Warp Count(A):', _getWarpCount()),
-              _buildReadingRow('Weft Count(B):', _getWeftCount()),
-              _buildReadingRow('Total Count(A+B):', _getTotalCount()),
+              _buildReadingRow('Warp Count(A):', '${currentReading['countA']} inch^2'),
+              _buildReadingRow('Weft Count(B):', '${currentReading['countB']} inch^2'),
+              _buildReadingRow('Total Count(A+B):', '${currentReading['totalCount']} inch^2'),
             ],
           ),
         ),
@@ -437,6 +442,11 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   }
 
   Widget _buildSampleSummary() {
+    final testResults = widget.report.testResults;
+    if (testResults == null) return const SizedBox.shrink();
+    
+    final allReadings = _getAllImageReadings();
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -487,34 +497,34 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   ),
                 ],
               ),
-              const TableRow(
+              ...allReadings.map((reading) => TableRow(
                 children: [
                   TableCell(
                     child: Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Text('1'),
+                      padding: const EdgeInsets.all(12),
+                      child: Text('${reading['index'] + 1}'),
                     ),
                   ),
                   TableCell(
                     child: Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Text('0'),
+                      padding: const EdgeInsets.all(12),
+                      child: Text('${reading['countA']}'),
                     ),
                   ),
                   TableCell(
                     child: Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Text('0'),
+                      padding: const EdgeInsets.all(12),
+                      child: Text('${reading['countB']}'),
                     ),
                   ),
                   TableCell(
                     child: Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Text('0'),
+                      padding: const EdgeInsets.all(12),
+                      child: Text('${reading['totalCount']}'),
                     ),
                   ),
                 ],
-              ),
+              )),
             ],
           ),
         ),
@@ -620,6 +630,52 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     );
   }
 
+  /// Gets the reading for the current image index
+  Map<String, dynamic> _getCurrentImageReading() {
+    final testResults = widget.report.testResults;
+    if (testResults != null && testResults['result'] != null) {
+      final results = testResults['result'] as List;
+      if (results.isNotEmpty && results[0] is List) {
+        final resultSet = results[0] as List;
+        if (_currentImageIndex < resultSet.length && resultSet[_currentImageIndex] is List) {
+          final currentResult = resultSet[_currentImageIndex] as List;
+          return {
+            'countA': currentResult.length > 0 ? currentResult[0] : 0,
+            'countB': currentResult.length > 1 ? currentResult[1] : 0,
+            'totalCount': currentResult.length > 2 ? currentResult[2] : 0,
+          };
+        }
+      }
+    }
+    return {'countA': 0, 'countB': 0, 'totalCount': 0};
+  }
+
+  /// Gets all readings for the sample summary table
+  List<Map<String, dynamic>> _getAllImageReadings() {
+    final testResults = widget.report.testResults;
+    final List<Map<String, dynamic>> allReadings = [];
+    
+    if (testResults != null && testResults['result'] != null) {
+      final results = testResults['result'] as List;
+      if (results.isNotEmpty && results[0] is List) {
+        final resultSet = results[0] as List;
+        for (int i = 0; i < resultSet.length; i++) {
+          if (resultSet[i] is List) {
+            final result = resultSet[i] as List;
+            allReadings.add({
+              'index': i,
+              'countA': result.length > 0 ? result[0] : 0,
+              'countB': result.length > 1 ? result[1] : 0,
+              'totalCount': result.length > 2 ? result[2] : 0,
+            });
+          }
+        }
+      }
+    }
+    
+    return allReadings;
+  }
+
   String _getDeviceName() {
     if (widget.report.metadata != null && widget.report.metadata!['device_name'] != null) {
       return widget.report.metadata!['device_name'];
@@ -638,38 +694,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     return 'Natural White (600 DNR)';
   }
 
-  String _getWarpCount() {
-    final testResults = widget.report.testResults;
-    if (testResults != null && testResults['mean'] != null) {
-      final mean = testResults['mean'] as List;
-      if (mean.isNotEmpty && mean[0] is List) {
-        return '${(mean[0] as List)[0]} inch^2';
-      }
-    }
-    return '44 inch^2';
-  }
-
-  String _getWeftCount() {
-    final testResults = widget.report.testResults;
-    if (testResults != null && testResults['mean'] != null) {
-      final mean = testResults['mean'] as List;
-      if (mean.isNotEmpty && mean[0] is List && (mean[0] as List).length > 1) {
-        return '${(mean[0] as List)[1]}inch^2';
-      }
-    }
-    return '55inch^2';
-  }
-
-  String _getTotalCount() {
-    final testResults = widget.report.testResults;
-    if (testResults != null && testResults['mean'] != null) {
-      final mean = testResults['mean'] as List;
-      if (mean.isNotEmpty && mean[0] is List && (mean[0] as List).length > 2) {
-        return '${(mean[0] as List)[2]}inch^2';
-      }
-    }
-    return '99inch^2';
-  }
 
   Map<String, String> _getMeanValues() {
     final testResults = widget.report.testResults;
@@ -688,10 +712,34 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   }
 
   Map<String, String> _getStdDeviationValues() {
+    final testResults = widget.report.testResults;
+    if (testResults != null && testResults['standard deviation'] != null) {
+      final stdDev = testResults['standard deviation'] as List;
+      if (stdDev.isNotEmpty && stdDev[0] is List) {
+        final values = stdDev[0] as List;
+        return {
+          'warpA': values.length > 0 ? '${values[0]}' : '0',
+          'warpB': values.length > 1 ? '${values[1]}' : '0',
+          'total': values.length > 2 ? '${values[2]}' : '0',
+        };
+      }
+    }
     return {'warpA': '0', 'warpB': '0', 'total': '0'};
   }
 
   Map<String, String> _getCoeffVariationValues() {
+    final testResults = widget.report.testResults;
+    if (testResults != null && testResults['variance'] != null) {
+      final variance = testResults['variance'] as List;
+      if (variance.isNotEmpty && variance[0] is List) {
+        final values = variance[0] as List;
+        return {
+          'warpA': values.length > 0 ? '${values[0]}' : '0',
+          'warpB': values.length > 1 ? '${values[1]}' : '0',
+          'total': values.length > 2 ? '${values[2]}' : '0',
+        };
+      }
+    }
     return {'warpA': '0', 'warpB': '0', 'total': '0'};
   }
 

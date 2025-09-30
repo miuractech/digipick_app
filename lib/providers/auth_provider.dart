@@ -13,6 +13,7 @@ class AuthProvider with ChangeNotifier {
   List<Map<String, dynamic>> _userRoles = [];
   Map<String, dynamic>? _primaryUserRole;
   Map<String, int> _deviceStats = {'total': 0, 'active': 0, 'inactive': 0};
+  bool _isOrganizationArchived = false;
 
   User? get user => _user;
   bool get isLoading => _isLoading;
@@ -23,6 +24,7 @@ class AuthProvider with ChangeNotifier {
   List<Map<String, dynamic>> get userRoles => _userRoles;
   Map<String, dynamic>? get primaryUserRole => _primaryUserRole;
   Map<String, int> get deviceStats => _deviceStats;
+  bool get isOrganizationArchived => _isOrganizationArchived;
   
   String? get userType => _primaryUserRole?['user_type'];
   dynamic get userDeviceAccess => _primaryUserRole?['devices'];
@@ -53,11 +55,22 @@ class AuthProvider with ChangeNotifier {
         
         if (_isAuthorized) {
           await _loadUserRoleData(_user!.id);
+          
+          // Check if organization is archived
+          if (_organization != null) {
+            _isOrganizationArchived = _organization!['archived'] == true;
+            
+            // If organization is archived, treat as unauthorized
+            if (_isOrganizationArchived) {
+              _isAuthorized = false;
+            }
+          }
         } else {
           _userRoles = [];
           _primaryUserRole = null;
           _organization = null;
           _deviceStats = {'total': 0, 'active': 0, 'inactive': 0};
+          _isOrganizationArchived = false;
         }
       } else {
         _isAuthorized = false;
@@ -65,6 +78,7 @@ class AuthProvider with ChangeNotifier {
         _primaryUserRole = null;
         _organization = null;
         _deviceStats = {'total': 0, 'active': 0, 'inactive': 0};
+        _isOrganizationArchived = false;
       }
       
       _isLoading = false;
@@ -80,6 +94,7 @@ class AuthProvider with ChangeNotifier {
         _primaryUserRole = null;
         _organization = null;
         _deviceStats = {'total': 0, 'active': 0, 'inactive': 0};
+        _isOrganizationArchived = false;
         _isLoading = false;
         notifyListeners();
       }
@@ -147,6 +162,7 @@ class AuthProvider with ChangeNotifier {
       _primaryUserRole = null;
       _organization = null;
       _deviceStats = {'total': 0, 'active': 0, 'inactive': 0};
+      _isOrganizationArchived = false;
     } finally {
       _setLoading(false);
     }

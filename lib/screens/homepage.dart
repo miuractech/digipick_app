@@ -129,6 +129,13 @@ class _HomepageState extends State<Homepage> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
 
+    // Check if organization is archived during runtime
+    if (authProvider.isOrganizationArchived && authProvider.organization != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pushReplacementNamed('/archived_organization');
+      });
+    }
+
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       body: SingleChildScrollView(

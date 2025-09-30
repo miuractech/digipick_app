@@ -141,6 +141,25 @@ class _Preloader2ScreenState extends State<Preloader2Screen>
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       await authProvider.recheckAuthorization();
       
+      // Check if organization is archived
+      if (authProvider.isOrganizationArchived && authProvider.organization != null) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = 'Access restricted. Please contact Paramount Instruments.';
+        });
+        await Future.delayed(const Duration(seconds: 3));
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/archived_organization');
+        }
+        return;
+      }
+      
+      // Check if user is still authorized after organization check
+      if (!authProvider.isAuthorized) {
+        Navigator.of(context).pushReplacementNamed('/unauthorized');
+        return;
+      }
+      
       // Step 5: "Ready!" - Show completion
       if (mounted) {
         setState(() {
