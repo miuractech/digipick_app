@@ -16,7 +16,7 @@ class _PreloaderScreenState extends State<PreloaderScreen>
   late Animation<double> _scaleAnimation;
 
   // Preloader duration variable
-  static const Duration preloaderDuration = Duration(milliseconds: 50);
+  static const Duration preloaderDuration = Duration(seconds: 1);
 
   @override
   void initState() {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -38,6 +39,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     print('Loading data for organization: $organizationId, user: $userId');
     print('Primary user role: ${authProvider.primaryUserRole}');
 
+    // Test if username column exists
+    final usernameColumnExists = await _userManagementService.testUsernameColumnExists();
+    print('Username column exists in database: $usernameColumnExists');
+
     if (organizationId != null && userId != null) {
       final canManage = await _userManagementService.canManageOrganizationUsers(userId, organizationId);
       
@@ -50,6 +55,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         ]);
 
         print('Loaded ${users.length} users and ${devices.length} devices');
+        
+        // Debug username data
+        for (var user in users) {
+          print('User: ${user['email']}, Username: ${user['username']}, Is Registered: ${user['is_registered']}');
+        }
 
         setState(() {
           _organizationUsers = users;
@@ -251,12 +261,26 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      user['email'],
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        fontWeight: FontWeight.w600,
+                    if (user['username'] != null && user['username'].toString().isNotEmpty) ...[
+                      Text(
+                        user['username'],
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
+                      Text(
+                        user['email'],
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                    ] else
+                      Text(
+                        user['email'],
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     const SizedBox(height: 2),
                     Row(
                       children: [
@@ -298,28 +322,31 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               ),
               PopupMenuButton<String>(
                 onSelected: (value) => _handleUserAction(value, user),
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit, size: 16),
-                        SizedBox(width: 8),
-                        Text('Edit Device Access'),
-                      ],
+                itemBuilder: (context) {
+                  final isManager = ['admin', 'manager'].contains(userType);
+                  return [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.edit, size: 16),
+                          const SizedBox(width: 8),
+                          Text(isManager ? 'Edit Username' : 'Edit Device Access'),
+                        ],
+                      ),
                     ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'remove',
-                    child: Row(
-                      children: [
-                        Icon(Icons.remove_circle, size: 16, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text('Remove User', style: TextStyle(color: Colors.red)),
-                      ],
+                    const PopupMenuItem(
+                      value: 'remove',
+                      child: Row(
+                        children: [
+                          Icon(Icons.remove_circle, size: 16, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Remove User', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ];
+                },
               ),
             ],
           ),
@@ -516,9 +543,63 @@ class AddUserDialog extends StatefulWidget {
 class _AddUserDialogState extends State<AddUserDialog> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   String _deviceAccessType = 'none'; // 'all', 'specific', 'none'
   List<String> _selectedDeviceIds = [];
   bool _isLoading = false;
+  bool _isCheckingEmail = false;
+  String? _emailError;
+
+  Timer? _emailDebounceTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_onEmailChanged);
+  }
+
+  void _onEmailChanged() {
+    // Clear previous email error when user starts typing
+    if (_emailError != null) {
+      setState(() {
+        _emailError = null;
+      });
+    }
+
+    // Cancel previous timer
+    _emailDebounceTimer?.cancel();
+    
+    // Start new timer to check email after user stops typing
+    _emailDebounceTimer = Timer(const Duration(milliseconds: 800), () {
+      _checkEmailDuplicate(_emailController.text.trim());
+    });
+  }
+
+  Future<void> _checkEmailDuplicate(String email) async {
+    if (email.isEmpty || !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) return;
+    
+    setState(() {
+      _isCheckingEmail = true;
+      _emailError = null;
+    });
+
+    try {
+      final userManagementService = UserManagementService();
+      final errorMessage = await userManagementService.checkEmailDuplicate(email);
+      
+      setState(() {
+        _emailError = errorMessage;
+      });
+    } catch (e) {
+      setState(() {
+        _emailError = 'Error checking email availability';
+      });
+    } finally {
+      setState(() {
+        _isCheckingEmail = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -536,19 +617,82 @@ class _AddUserDialogState extends State<AddUserDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
               // Email Field
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: InputDecoration(
+                      labelText: 'Email Address',
+                      hintText: 'user@example.com',
+                      suffixIcon: _isCheckingEmail
+                          ? const Padding(
+                              padding: EdgeInsets.all(12.0),
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : _emailError != null
+                              ? const Icon(Icons.error, color: Colors.red)
+                              : _emailController.text.isNotEmpty && RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(_emailController.text)
+                                  ? const Icon(Icons.check_circle, color: Colors.green)
+                                  : null,
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: _emailError != null ? Colors.red : Colors.grey,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: _emailError != null ? Colors.red : Colors.grey,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: _emailError != null ? Colors.red : AppColors.primaryAccent,
+                        ),
+                      ),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) {
+                      if (value?.isEmpty ?? true) {
+                        return 'Please enter an email address';
+                      }
+                      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value!)) {
+                        return 'Please enter a valid email address';
+                      }
+                      // Don't return _emailError here as it's shown below
+                      return null;
+                    },
+                  ),
+                  if (_emailError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6, left: 12),
+                      child: Text(
+                        _emailError!,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              // Username Field (Optional)
               TextFormField(
-                controller: _emailController,
+                controller: _usernameController,
                 decoration: const InputDecoration(
-                  labelText: 'Email Address',
-                  hintText: 'user@example.com',
+                  labelText: 'Username (Optional)',
+                  hintText: 'Enter a display name',
                 ),
-                keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value?.isEmpty ?? true) {
-                    return 'Please enter an email address';
-                  }
-                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value!)) {
-                    return 'Please enter a valid email address';
+                  // Username is optional, so only validate if provided
+                  if (value != null && value.isNotEmpty && value.trim().length < 2) {
+                    return 'Username must be at least 2 characters';
                   }
                   return null;
                 },
@@ -585,7 +729,7 @@ class _AddUserDialogState extends State<AddUserDialog> {
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: _isLoading ? null : _addUser,
+          onPressed: (_isLoading || _isCheckingEmail || _emailError != null) ? null : _addUser,
           child: _isLoading
               ? const SizedBox(
                   width: 16,
@@ -600,6 +744,11 @@ class _AddUserDialogState extends State<AddUserDialog> {
 
   Future<void> _addUser() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Do a final check for email duplicates
+    if (_emailError != null) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -627,6 +776,7 @@ class _AddUserDialogState extends State<AddUserDialog> {
       final result = await userManagementService.addOrganizationUser(
         organizationId: organizationId,
         email: _emailController.text.trim().toLowerCase(),
+        username: _usernameController.text.trim().isEmpty ? null : _usernameController.text.trim(),
         userType: 'user',
         devices: devices,
         addedBy: addedBy,
@@ -646,12 +796,17 @@ class _AddUserDialogState extends State<AddUserDialog> {
       Navigator.pop(context);
       widget.onUserAdded();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error adding user: $e'),
-          backgroundColor: AppColors.errorColor,
-        ),
-      );
+      // Only show SnackBar for errors that aren't email duplicates (those are shown inline)
+      String errorMessage = e.toString();
+      if (!errorMessage.contains('already registered to an organization') &&
+          !errorMessage.contains('already tracked for this organization')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error adding user: $e'),
+            backgroundColor: AppColors.errorColor,
+          ),
+        );
+      }
     } finally {
       setState(() {
         _isLoading = false;
@@ -661,7 +816,9 @@ class _AddUserDialogState extends State<AddUserDialog> {
 
   @override
   void dispose() {
+    _emailDebounceTimer?.cancel();
     _emailController.dispose();
+    _usernameController.dispose();
     super.dispose();
   }
 }
@@ -684,6 +841,7 @@ class EditUserDialog extends StatefulWidget {
 }
 
 class _EditUserDialogState extends State<EditUserDialog> {
+  final _usernameController = TextEditingController();
   late String _deviceAccessType;
   late List<String> _selectedDeviceIds;
   bool _isLoading = false;
@@ -691,6 +849,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
   @override
   void initState() {
     super.initState();
+    
+    // Initialize username controller
+    _usernameController.text = widget.user['username'] ?? '';
     
     final devices = widget.user['devices'];
     if (devices == "all") {
@@ -707,34 +868,79 @@ class _EditUserDialogState extends State<EditUserDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isManager = ['admin', 'manager'].contains(widget.user['user_type']);
+    
     return AlertDialog(
       title: Text('Edit ${widget.user['email']}'),
       content: SizedBox(
         width: double.maxFinite,
-        height: 600, // Fixed height to accommodate device selection
+        height: isManager ? 200 : 600, // Reduced height for managers since they can't edit device access
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-            // Device Selection Widget
-            DeviceSelectionWidget(
-              devices: widget.organizationDevices,
-              selectedDeviceIds: _selectedDeviceIds,
-              accessType: _deviceAccessType,
-              onSelectionChanged: (selectedIds) {
-                setState(() {
-                  _selectedDeviceIds = selectedIds;
-                });
-              },
-              onAccessTypeChanged: (accessType) {
-                setState(() {
-                  _deviceAccessType = accessType;
-                  if (accessType != 'specific') {
-                    _selectedDeviceIds.clear();
-                  }
-                });
+            // Username Field (Optional)
+            TextFormField(
+              controller: _usernameController,
+              decoration: const InputDecoration(
+                labelText: 'Username (Optional)',
+                hintText: 'Enter a display name',
+              ),
+              validator: (value) {
+                // Username is optional, so only validate if provided
+                if (value != null && value.isNotEmpty && value.trim().length < 2) {
+                  return 'Username must be at least 2 characters';
+                }
+                return null;
               },
             ),
+            const SizedBox(height: 16),
+            
+            // Show restriction message for managers
+            if (isManager) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.warningColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.warningColor.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: AppColors.warningColor, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Device access permissions cannot be edited for managers and admins.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.warningColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              // Device Selection Widget - only show for non-managers
+              DeviceSelectionWidget(
+                devices: widget.organizationDevices,
+                selectedDeviceIds: _selectedDeviceIds,
+                accessType: _deviceAccessType,
+                onSelectionChanged: (selectedIds) {
+                  setState(() {
+                    _selectedDeviceIds = selectedIds;
+                  });
+                },
+                onAccessTypeChanged: (accessType) {
+                  setState(() {
+                    _deviceAccessType = accessType;
+                    if (accessType != 'specific') {
+                      _selectedDeviceIds.clear();
+                    }
+                  });
+                },
+              ),
+            ],
             ],
           ),
         ),
@@ -771,27 +977,40 @@ class _EditUserDialogState extends State<EditUserDialog> {
         throw Exception('Invalid organization context');
       }
 
+      final isManager = ['admin', 'manager'].contains(widget.user['user_type']);
+      
       dynamic devices;
-      if (_deviceAccessType == 'all') {
-        devices = "all";
-      } else if (_deviceAccessType == 'specific') {
-        devices = _selectedDeviceIds;
+      String userType = widget.user['user_type'] ?? 'user';
+      
+      if (isManager) {
+        // For managers, preserve existing device permissions
+        devices = widget.user['devices'];
       } else {
-        devices = [];
+        // For regular users, allow device permission changes
+        if (_deviceAccessType == 'all') {
+          devices = "all";
+        } else if (_deviceAccessType == 'specific') {
+          devices = _selectedDeviceIds;
+        } else {
+          devices = [];
+        }
       }
 
       final userManagementService = UserManagementService();
       await userManagementService.updateUserPermissions(
         userId: widget.user['user_id'] ?? widget.user['id'],
         organizationId: organizationId,
-        userType: 'user',
+        userType: userType,
         devices: devices,
+        username: _usernameController.text.trim().isEmpty ? null : _usernameController.text.trim(),
         isRegistered: widget.user['is_registered'] ?? false,
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('User permissions updated successfully'),
+        SnackBar(
+          content: Text(isManager 
+              ? 'Username updated successfully' 
+              : 'User permissions updated successfully'),
           backgroundColor: AppColors.successColor,
         ),
       );
@@ -810,5 +1029,11 @@ class _EditUserDialogState extends State<EditUserDialog> {
         _isLoading = false;
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    super.dispose();
   }
 }

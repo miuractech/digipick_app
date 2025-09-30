@@ -238,12 +238,13 @@ class AppComponents {
 
   /// Universal Header
   /// 
-  /// Standard header with logo and optional back navigation and actions
+  /// Standard header with logo/device name and optional back navigation and actions
   static Widget universalHeader({
     bool showBackButton = false,
     VoidCallback? onBackPressed,
     List<Widget>? actions,
     EdgeInsets? padding,
+    String? deviceName,
   }) {
     return Padding(
       padding: padding ?? const EdgeInsets.all(16),
@@ -260,19 +261,33 @@ class AppComponents {
                   onPressed: onBackPressed,
                 )
               else
-                const SizedBox(width: 48), // Spacer to center logo
+                const SizedBox(width: 48), // Spacer to center content
               
-              // Logo
-              SvgPicture.asset(
-                'lib/assets/logo.svg',
-                height: 32,
+              // Device name or Logo
+              Expanded(
+                child: Center(
+                  child: deviceName != null && deviceName.isNotEmpty
+                      ? Text(
+                          deviceName,
+                          style: AppTextStyles.h2.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primaryText,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      : SvgPicture.asset(
+                          'lib/assets/logo.svg',
+                          height: 32,
+                        ),
+                ),
               ),
               
               // Actions or spacer
               if (actions != null && actions.isNotEmpty)
                 Row(children: actions)
               else
-                const SizedBox(width: 48), // Spacer to center logo
+                const SizedBox(width: 48), // Spacer to center content
             ],
           ),
           const SizedBox(height: 8),

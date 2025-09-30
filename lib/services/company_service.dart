@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:typed_data';
 
 class CompanyService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -147,5 +148,48 @@ class CompanyService {
     }
 
     return errors;
+  }
+
+  /// Upload profile picture to storage bucket
+  Future<String?> uploadProfilePicture(String fileName, Uint8List fileBytes) async {
+    try {
+      final String path = 'profile-pictures/$fileName';
+      
+      await _supabase.storage
+          .from('company-assets')
+          .uploadBinary(path, fileBytes);
+
+      final String publicUrl = _supabase.storage
+          .from('company-assets')
+          .getPublicUrl(path);
+
+      return publicUrl;
+    } catch (e) {
+      print('Error uploading profile picture: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete profile picture from storage
+  Future<void> deleteProfilePicture(String profilePictureUrl) async {
+    try {
+      // Extract the path from the URL
+      final uri = Uri.parse(profilePictureUrl);
+      final pathSegments = uri.pathSegments;
+      
+      // Find the index of 'company-assets' bucket
+      final bucketIndex = pathSegments.indexOf('company-assets');
+      if (bucketIndex != -1 && bucketIndex < pathSegments.length - 1) {
+        // Get the path after the bucket name
+        final filePath = pathSegments.sublist(bucketIndex + 1).join('/');
+        
+        await _supabase.storage
+            .from('company-assets')
+            .remove([filePath]);
+      }
+    } catch (e) {
+      print('Error deleting profile picture: $e');
+      // Don't rethrow as this is a cleanup operation
+    }
   }
 }

@@ -39,6 +39,7 @@ class DeviceService {
           .from('devices')
           .select('*')
           .eq('company_id', companyId)
+          .eq('archived', false)
           .order('device_name', ascending: true);
 
       return List<Map<String, dynamic>>.from(devices);

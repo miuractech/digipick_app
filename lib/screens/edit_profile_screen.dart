@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'dart:typed_data';
 import '../providers/auth_provider.dart';
 import '../services/company_service.dart';
 import '../theme/app_theme.dart';
@@ -47,6 +50,11 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final CompanyService _companyService = CompanyService();
+  final ImagePicker _picker = ImagePicker();
+  
+  // Profile Picture State
+  File? _selectedProfilePicture;
+  bool _profilePictureChanged = false;
   
   // Company Details Controllers
   late TextEditingController _nameController;
@@ -168,6 +176,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: 32),
+                  
+                  // Profile Picture Section
+                  _buildProfilePictureSection(),
                   const SizedBox(height: 32),
                   
                   // Company Details Form
@@ -370,6 +382,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         throw 'You do not have permission to update company details';
       }
 
+      // Handle profile picture upload if changed
+      String? profilePictureUrl = organization['profile_picture_url'];
+      
+      if (_profilePictureChanged) {
+        if (_selectedProfilePicture != null) {
+          // Upload new profile picture
+          final fileBytes = Uint8List.fromList(await _selectedProfilePicture!.readAsBytes());
+          final fileName = 'profile_${companyId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          
+          profilePictureUrl = await _companyService.uploadProfilePicture(
+            fileName,
+            fileBytes,
+          );
+        } else {
+          // Remove profile picture
+          profilePictureUrl = null;
+        }
+      }
+
       // Prepare company data
       final companyData = {
         'name': _nameController.text.trim(),
@@ -385,6 +416,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'state': _stateController.text.trim().isEmpty ? null : _stateController.text.trim(),
         'postal_code': _postalCodeController.text.trim().isEmpty ? null : _postalCodeController.text.trim(),
         'country': _countryController.text.trim().isEmpty ? 'India' : _countryController.text.trim(),
+        'profile_picture_url': profilePictureUrl,
       };
 
       // Validate data
@@ -425,6 +457,198 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _saving = false;
         });
       }
+    }
+  }
+
+  Widget _buildProfilePictureSection() {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final organization = authProvider.organization;
+    
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: _showImagePicker,
+          child: Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primaryAccent.withOpacity(0.1),
+              border: Border.all(
+                color: AppColors.primaryAccent.withOpacity(0.3),
+                width: 3,
+              ),
+            ),
+            child: ClipOval(
+              child: _selectedProfilePicture != null
+                  ? Image.file(
+                      _selectedProfilePicture!,
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.cover,
+                    )
+                  : (organization?['profile_picture_url'] != null
+                      ? Image.network(
+                          organization!['profile_picture_url'],
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildDefaultProfileIcon();
+                          },
+                        )
+                      : _buildDefaultProfileIcon()),
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        GestureDetector(
+          onTap: _showImagePicker,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.primaryAccent.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.primaryAccent.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.camera_alt,
+                  color: AppColors.primaryAccent,
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Change Photo',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.primaryAccent,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDefaultProfileIcon() {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final organization = authProvider.organization;
+    final firstLetter = organization?['name']?.toString().isNotEmpty == true
+        ? organization!['name'].toString()[0].toUpperCase()
+        : 'C';
+    
+    return Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.primaryAccent,
+      ),
+      child: Center(
+        child: Text(
+          firstLetter,
+          style: AppTextStyles.h1.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 40,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showImagePicker() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Camera'),
+                onTap: () {
+                  _pickImage(ImageSource.camera);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Gallery'),
+                onTap: () {
+                  _pickImage(ImageSource.gallery);
+                  Navigator.pop(context);
+                },
+              ),
+              if (_selectedProfilePicture != null || 
+                  (Provider.of<AuthProvider>(context, listen: false).organization?['profile_picture_url'] != null))
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text('Remove Photo', style: TextStyle(color: Colors.red)),
+                  onTap: () {
+                    _removeProfilePicture();
+                    Navigator.pop(context);
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        setState(() {
+          _selectedProfilePicture = File(image.path);
+          _profilePictureChanged = true;
+        });
+        
+        if (mounted) {
+          AppComponents.showSuccessSnackbar(
+            context,
+            'Profile picture selected successfully!',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        AppComponents.showErrorSnackbar(
+          context,
+          'Failed to select image. Please try again.',
+        );
+      }
+    }
+  }
+
+  void _removeProfilePicture() {
+    setState(() {
+      _selectedProfilePicture = null;
+      _profilePictureChanged = true;
+    });
+    
+    if (mounted) {
+      AppComponents.showSuccessSnackbar(
+        context,
+        'Profile picture removed',
+      );
     }
   }
 }

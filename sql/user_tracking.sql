@@ -22,6 +22,7 @@ create table if not exists public.user_tracking (
   id uuid not null default gen_random_uuid(),
   organization_id uuid not null,
   email text not null,
+  username text null, -- Optional username for the user
   user_type text not null default 'user', -- Role: 'admin', 'manager', or 'user'
   -- devices field structure same as user_role table
   devices jsonb null default '[]'::jsonb,
@@ -35,13 +36,15 @@ create table if not exists public.user_tracking (
   constraint user_tracking_added_by_fkey foreign key (added_by) references public.users (id) on delete cascade,
   constraint user_tracking_user_id_fkey foreign key (user_id) references public.users (id) on delete set null,
   constraint user_tracking_user_type_check check (user_type in ('admin', 'manager', 'user')),
-  constraint user_tracking_unique_org_email unique (organization_id, email),
+  -- NOTE: Global email uniqueness constraint added via migration_add_username_support.sql
+  -- constraint user_tracking_unique_org_email unique (organization_id, email), -- Replaced with global email constraint
   constraint user_tracking_email_format check (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
 ) tablespace pg_default;
 
 -- Create indexes for better performance
 create index if not exists idx_user_tracking_organization_id on public.user_tracking using btree (organization_id) tablespace pg_default;
 create index if not exists idx_user_tracking_email on public.user_tracking using btree (email) tablespace pg_default;
+create index if not exists idx_user_tracking_username on public.user_tracking using btree (username) tablespace pg_default;
 create index if not exists idx_user_tracking_added_by on public.user_tracking using btree (added_by) tablespace pg_default;
 create index if not exists idx_user_tracking_is_synced on public.user_tracking using btree (is_synced) tablespace pg_default;
 create index if not exists idx_user_tracking_created_at on public.user_tracking using btree (created_at) tablespace pg_default;

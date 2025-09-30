@@ -33,6 +33,7 @@ class UserManagementService {
             'id': role['id'],
             'user_id': role['user_id'],
             'email': role['user']['email'],
+            'username': null, // Username not available for already registered users
             'user_type': role['user_type'],
             'devices': role['devices'],
             'is_registered': true,
@@ -50,6 +51,7 @@ class UserManagementService {
           'id': tracking['id'],
           'user_id': null,
           'email': tracking['email'],
+          'username': tracking['username'],
           'user_type': tracking['user_type'],
           'devices': tracking['devices'],
           'is_registered': false,
@@ -75,6 +77,7 @@ class UserManagementService {
   Future<Map<String, dynamic>?> addOrganizationUser({
     required String organizationId,
     required String email,
+    String? username,
     required String userType,
     required dynamic devices,
     required String addedBy,
@@ -82,30 +85,28 @@ class UserManagementService {
     try {
       print('Adding user: $email to organization: $organizationId');
       
-      // Check if email is already tracked in user_tracking for this organization
-      final existingTracking = await _supabase
+      // Check if email is already tracked in user_tracking for ANY organization
+      final existingTrackingAnyOrg = await _supabase
           .from('user_tracking')
-          .select('id')
-          .eq('organization_id', organizationId)
+          .select('id, organization_id')
           .eq('email', email.toLowerCase())
           .maybeSingle();
 
-      if (existingTracking != null) {
-        throw 'User email is already tracked for this organization';
+      if (existingTrackingAnyOrg != null) {
+        throw 'This email address is already registered to an organization.';
       }
 
-      // Check if user exists and is already in user_role for this organization
+      // Check if user exists and is already a member of ANY organization
       final userId = await getUserIdByEmail(email);
       if (userId != null) {
-        final existingRole = await _supabase
+        final existingRoleAnyOrg = await _supabase
             .from('user_role')
-            .select('id')
-            .eq('organization_id', organizationId)
+            .select('id, organization_id')
             .eq('user_id', userId)
             .maybeSingle();
 
-        if (existingRole != null) {
-          throw 'User is already a member of this organization';
+        if (existingRoleAnyOrg != null) {
+          throw 'This user is already registered to an organization.';
         }
       }
 
@@ -117,6 +118,7 @@ class UserManagementService {
           .insert({
             'organization_id': organizationId, 
             'email': email.toLowerCase(),
+            'username': username?.trim(),
             'user_type': userType,
             'devices': devices,
             'added_by': addedBy,
@@ -141,6 +143,7 @@ class UserManagementService {
     required String organizationId,
     required String userType,
     required dynamic devices,
+    String? username,
     bool isRegistered = true,
   }) async {
     try {
@@ -165,6 +168,7 @@ class UserManagementService {
             .update({
               'user_type': userType,
               'devices': devices,
+              'username': username?.trim(),
             })
             .eq('id', userId) // For tracking, userId is actually the tracking record ID
             .select()
@@ -216,6 +220,7 @@ class UserManagementService {
           .from('devices')
           .select('id, device_name, make, model, serial_number')
           .eq('company_id', organizationId)
+          .eq('archived', false)
           .order('device_name', ascending: true);
 
       print('Found ${devices.length} devices for organization $organizationId');
@@ -258,6 +263,56 @@ class UserManagementService {
       return userRole != null && 
              (userRole['user_type'] == 'manager' || userRole['user_type'] == 'admin');
     } catch (e) {
+      return false;
+    }
+  }
+
+  /// Check if email is already associated with any organization
+  Future<String?> checkEmailDuplicate(String email) async {
+    try {
+      // Check if email is already tracked in user_tracking for ANY organization
+      final existingTrackingAnyOrg = await _supabase
+          .from('user_tracking')
+          .select('id, organization_id')
+          .eq('email', email.toLowerCase())
+          .maybeSingle();
+
+      if (existingTrackingAnyOrg != null) {
+        return 'This email address is already registered to an organization.';
+      }
+
+      // Check if user exists and is already a member of ANY organization
+      final userId = await getUserIdByEmail(email);
+      if (userId != null) {
+        final existingRoleAnyOrg = await _supabase
+            .from('user_role')
+            .select('id, organization_id')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+        if (existingRoleAnyOrg != null) {
+          return 'This user is already registered to an organization.';
+        }
+      }
+
+      return null; // No duplicate found
+    } catch (e) {
+      print('Error checking email duplicate: $e');
+      return 'Error checking email availability';
+    }
+  }
+
+  /// Test if username column exists in user_tracking table
+  Future<bool> testUsernameColumnExists() async {
+    try {
+      // Try to query the username column
+      await _supabase
+          .from('user_tracking')
+          .select('username')
+          .limit(1);
+      return true;
+    } catch (e) {
+      print('Username column test failed: $e');
       return false;
     }
   }
@@ -309,6 +364,7 @@ class OrganizationUser {
   final String id;
   final String? userId;
   final String email;
+  final String? username;
   final String userType;
   final dynamic devices;
   final bool isRegistered;
@@ -322,6 +378,7 @@ class OrganizationUser {
     required this.id,
     this.userId,
     required this.email,
+    this.username,
     required this.userType,
     required this.devices,
     required this.isRegistered,
@@ -337,6 +394,7 @@ class OrganizationUser {
       id: json['id'],
       userId: json['user_id'],
       email: json['email'],
+      username: json['username'],
       userType: json['user_type'],
       devices: json['devices'],
       isRegistered: json['is_registered'] ?? false,

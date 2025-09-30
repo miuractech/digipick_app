@@ -48,7 +48,7 @@ class MyApp extends StatelessWidget {
               '/preloader': (context) => const PreloaderScreen(),
               '/preloader2': (context) => const Preloader2Screen(),
               '/login': (context) => const LoginScreen(),
-              '/home': (context) => const HomeScreen(),
+              '/home': (context) => const AuthWrapper(),
               '/unauthorized': (context) => const UnauthorizedScreen(),
               '/auth': (context) => const AuthWrapper(),
             },

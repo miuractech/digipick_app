@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_components.dart';
 import '../theme/service_request_components.dart';
@@ -84,7 +83,11 @@ class _DeviceStatisticsScreenState extends State<DeviceStatisticsScreen>
                 ? _buildEmptyState()
                 : Column(
                     children: [
-                      _buildHeader(),
+                      AppComponents.universalHeader(
+                        showBackButton: true,
+                        onBackPressed: () => Navigator.pop(context),
+                        deviceName: _devices.isNotEmpty ? _devices[_currentDeviceIndex].name : null,
+                      ),
                       _buildDeviceCarousel(),
                       _buildTabBar(),
                       Expanded(
@@ -126,31 +129,6 @@ class _DeviceStatisticsScreenState extends State<DeviceStatisticsScreen>
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-          children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.primaryText),
-            onPressed: () => Navigator.pop(context),
-          ),
-          const SizedBox(width: 8),
-          SvgPicture.asset(
-            'lib/assets/logo.svg',
-            height: 24,
-          ),
-          const Spacer(),
-                      Text(
-            'Device ${_currentDeviceIndex + 1} of ${_devices.length}',
-                        style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.tertiaryText,
-                        ),
-                      ),
-                    ],
-                  ),
-    );
-  }
 
   Widget _buildDeviceCarousel() {
     return SizedBox(

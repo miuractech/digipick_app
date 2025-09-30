@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_components.dart';
 import '../services/device_service.dart';
@@ -75,7 +74,9 @@ class _CareTabScreenState extends State<CareTabScreen>
                 ? _buildEmptyState()
                 : Column(
                     children: [
-                      _buildHeader(),
+                      AppComponents.universalHeader(
+                        deviceName: _devices.isNotEmpty ? _devices[_currentDeviceIndex].name : null,
+                      ),
                       _buildDeviceCarousel(),
                       _buildTabBar(),
                       Expanded(
@@ -116,33 +117,6 @@ class _CareTabScreenState extends State<CareTabScreen>
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        children: [
-          SvgPicture.asset(
-            'lib/assets/logo.svg',
-            height: 24,
-          ),
-          const SizedBox(width: 16),
-          Text(
-            'Device Care',
-            style: AppTextStyles.h2.copyWith(
-              color: AppColors.primaryText,
-            ),
-          ),
-          const Spacer(),
-          Text(
-            'Device ${_currentDeviceIndex + 1} of ${_devices.length}',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.tertiaryText,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildDeviceCarousel() {
     return SizedBox(

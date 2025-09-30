@@ -74,7 +74,7 @@ class UnauthorizedScreen extends StatelessWidget {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.of(context).pushNamedAndRemoveUntil(
-                          '/login',
+                          '/auth',
                           (route) => false,
                         );
                       },

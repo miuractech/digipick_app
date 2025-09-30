@@ -74,7 +74,32 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     child: Row(
                       children: [
-                       
+                        // Profile Picture
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.primaryAccent.withOpacity(0.1),
+                            border: Border.all(
+                              color: AppColors.primaryAccent.withOpacity(0.3),
+                              width: 2,
+                            ),
+                          ),
+                          child: ClipOval(
+                            child: organization?['profile_picture_url'] != null
+                                ? Image.network(
+                                    organization!['profile_picture_url'],
+                                    width: 64,
+                                    height: 64,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return _buildDefaultAvatar();
+                                    },
+                                  )
+                                : _buildDefaultAvatar(),
+                          ),
+                        ),
                         const SizedBox(width: 18),
                         // Company Details
                         Expanded(
@@ -491,13 +516,46 @@ class _ProfilePageState extends State<ProfilePage> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              authProvider.signOut();
+              await authProvider.signOut();
+              // Navigate through auth wrapper for proper routing
+              if (context.mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/auth',
+                  (route) => false,
+                );
+              }
             },
             child: const Text('Sign Out'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDefaultAvatar() {
+    final organization = Provider.of<AuthProvider>(context).organization;
+    final firstLetter = organization?['name']?.toString().isNotEmpty == true
+        ? organization!['name'].toString()[0].toUpperCase()
+        : 'C';
+    
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.primaryAccent,
+      ),
+      child: Center(
+        child: Text(
+          firstLetter,
+          style: AppTextStyles.h2.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+          ),
+        ),
       ),
     );
   }

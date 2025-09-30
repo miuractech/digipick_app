@@ -7,6 +7,7 @@ create table public.company_details (
   cin_number text null,
   email text null,
   phone text null,
+  profile_picture_url text null,
   address_line1 text null,
   address_line2 text null,
   city text null,

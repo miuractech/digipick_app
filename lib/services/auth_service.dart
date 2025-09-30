@@ -94,7 +94,8 @@ class AuthService {
       var query = _supabase
           .from('devices')
           .select('*')
-          .eq('company_id', companyId);
+          .eq('company_id', companyId)
+          .eq('archived', false);
       
       // Filter devices based on user permissions
       if (devices != "all") {
@@ -126,7 +127,8 @@ class AuthService {
       var query = _supabase
           .from('devices')
           .select('*')
-          .eq('company_id', companyId);
+          .eq('company_id', companyId)
+          .eq('archived', false);
       
       if (searchQuery != null && searchQuery.isNotEmpty) {
         query = query.or('device_name.ilike.%$searchQuery%,make.ilike.%$searchQuery%,model.ilike.%$searchQuery%,serial_number.ilike.%$searchQuery%,mac_address.ilike.%$searchQuery%');
@@ -345,7 +347,8 @@ class AuthService {
       final devices = await _supabase
           .from('devices')
           .select('id')
-          .eq('company_id', companyId);
+          .eq('company_id', companyId)
+          .eq('archived', false);
       
       return devices.map<String>((device) => device['id'] as String).toList();
     } catch (e) {

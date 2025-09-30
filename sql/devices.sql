@@ -11,6 +11,7 @@ create table public.devices (
   warranty_expiry_date date null,
   amc_start_date date null,
   amc_end_date date null,
+  is_archived boolean not null default false,
   created_at timestamp with time zone null default timezone ('utc'::text, now()),
   updated_at timestamp with time zone null default timezone ('utc'::text, now()),
   constraint devices_pkey primary key (id),

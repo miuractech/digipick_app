@@ -28,12 +28,17 @@ class _ReportsPageState extends State<ReportsPage> {
   bool _hasMore = true;
   int _currentPage = 0;
   final int _pageSize = 20;
+  int _totalReportsCount = 0;
   
   // Filters
   String? _selectedDeviceId;
   String? _selectedStatus;
   DateTime? _startDate;
   DateTime? _endDate;
+  
+  // Sorting
+  String _sortBy = 'date'; // 'date', 'name', 'status'
+  bool _sortAscending = false;
 
   @override
   void initState() {
@@ -84,6 +89,7 @@ class _ReportsPageState extends State<ReportsPage> {
         _currentPage = 0;
         _hasMore = true;
         _reports.clear();
+        _totalReportsCount = 0;
       }
     });
 
@@ -102,17 +108,45 @@ class _ReportsPageState extends State<ReportsPage> {
           ? 0 
           : (_currentPage == 0 ? 0 : (_currentPage - 1) * _pageSize + (isDefaultLoad ? 10 : 0));
       
+      // Fix: Adjust end date to include the full day (23:59:59.999)
+      DateTime? adjustedEndDate = _endDate;
+      if (_endDate != null) {
+        adjustedEndDate = DateTime(
+          _endDate!.year,
+          _endDate!.month,
+          _endDate!.day,
+          23,
+          59,
+          59,
+          999,
+        );
+      }
+      
       final reportsData = await _authService.getDeviceTestsForUser(
         userId: authProvider.user!.id,
         deviceId: _selectedDeviceId,
         status: _selectedStatus,
         startDate: _startDate,
-        endDate: _endDate,
+        endDate: adjustedEndDate,
         limit: currentLimit,
         offset: currentOffset,
       );
 
       final newReports = reportsData.map((data) => DeviceTest.fromJson(data)).toList();
+
+      // Get total count for display (only on first load or filter change)
+      if (reset) {
+        final totalCountData = await _authService.getDeviceTestsForUser(
+          userId: authProvider.user!.id,
+          deviceId: _selectedDeviceId,
+          status: _selectedStatus,
+          startDate: _startDate,
+          endDate: adjustedEndDate,
+          limit: 1000, // Large number to get total count
+          offset: 0,
+        );
+        _totalReportsCount = totalCountData.length;
+      }
 
       setState(() {
         _reports.addAll(newReports);
@@ -120,6 +154,11 @@ class _ReportsPageState extends State<ReportsPage> {
         _hasMore = newReports.length == currentLimit;
         _isLoading = false;
       });
+
+      // Apply sorting after loading
+      if (_reports.isNotEmpty) {
+        _applySorting();
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -144,21 +183,87 @@ class _ReportsPageState extends State<ReportsPage> {
           AppComponents.universalHeader(
             showBackButton: true,
             onBackPressed: () => Navigator.pop(context),
-            actions: [
-              AppComponents.iconButton(
-                icon: Icons.filter_list,
-                onPressed: _showFilterModal,
-                iconColor: AppColors.primaryText,
-              ),
-              AppComponents.iconButton(
-                icon: Icons.refresh,
-                onPressed: () async {
-                  await _loadReports(reset: true);
-                },
-                iconColor: AppColors.primaryText,
-              ),
-            ],
           ),
+          // Action buttons row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            child: Row(
+              children: [
+                // Sort button
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _showSortOptions,
+                    icon: const Icon(Icons.sort, size: 20),
+                    label: Text('${_getSortDisplayName()}'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppColors.primaryText,
+                      elevation: 1,
+                      side: BorderSide(color: AppColors.dividerColor),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Filter button
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _showFilterModal,
+                    icon: Icon(
+                      Icons.filter_list, 
+                      size: 20,
+                      color: _hasActiveFilters() ? AppColors.primaryAccent : AppColors.primaryText,
+                    ),
+                    label: Text(_hasActiveFilters() ? 'Filtered' : 'Filter'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _hasActiveFilters() ? AppColors.primaryAccent.withOpacity(0.1) : Colors.white,
+                      foregroundColor: _hasActiveFilters() ? AppColors.primaryAccent : AppColors.primaryText,
+                      elevation: 1,
+                      side: BorderSide(
+                        color: _hasActiveFilters() ? AppColors.primaryAccent : AppColors.dividerColor,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Refresh button
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.dividerColor),
+                  ),
+                  child: IconButton(
+                    onPressed: () async {
+                      await _loadReports(reset: true);
+                    },
+                    icon: const Icon(Icons.refresh, size: 24),
+                    color: AppColors.primaryText,
+                    padding: const EdgeInsets.all(12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Total count display
+          if (_totalReportsCount > 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Text(
+                'Total Reports: $_totalReportsCount',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.secondaryText,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -173,6 +278,118 @@ class _ReportsPageState extends State<ReportsPage> {
         ],
       ),
     );
+  }
+
+  void _showSortOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text('Sort By', style: AppTextStyles.h2),
+              const SizedBox(height: 16),
+              _buildSortOption('Date', 'date', Icons.calendar_today),
+              _buildSortOption('Status', 'status', Icons.flag),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Icon(Icons.sort, color: AppColors.primaryText),
+                  const SizedBox(width: 8),
+                  Text('Order: ', style: AppTextStyles.bodyLarge),
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _sortAscending = !_sortAscending;
+                      });
+                      _applySorting();
+                      Navigator.pop(context);
+                    },
+                    icon: Icon(_sortAscending ? Icons.arrow_upward : Icons.arrow_downward),
+                    label: Text(_sortAscending ? 'Ascending' : 'Descending'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSortOption(String title, String value, IconData icon) {
+    final isSelected = _sortBy == value;
+    return ListTile(
+      leading: Icon(icon, color: isSelected ? AppColors.primaryAccent : AppColors.tertiaryText),
+      title: Text(
+        title,
+        style: AppTextStyles.bodyLarge.copyWith(
+          color: isSelected ? AppColors.primaryAccent : AppColors.primaryText,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        ),
+      ),
+      trailing: isSelected ? const Icon(Icons.check, color: AppColors.primaryAccent) : null,
+      onTap: () {
+        setState(() {
+          _sortBy = value;
+        });
+        _applySorting();
+        Navigator.pop(context);
+      },
+    );
+  }
+
+  void _applySorting() {
+    setState(() {
+      _reports.sort((a, b) {
+        int comparison = 0;
+        switch (_sortBy) {
+          case 'date':
+            comparison = (a.testDate ?? DateTime(1970)).compareTo(b.testDate ?? DateTime(1970));
+            break;
+          case 'status':
+            comparison = (a.testStatus ?? '').compareTo(b.testStatus ?? '');
+            break;
+        }
+        return _sortAscending ? comparison : -comparison;
+      });
+    });
+  }
+
+  String _getSortDisplayName() {
+    switch (_sortBy) {
+      case 'date':
+        return 'Date';
+      case 'status':
+        return 'Status';
+      default:
+        return 'Date';
+    }
+  }
+
+  bool _hasActiveFilters() {
+    return _selectedDeviceId != null ||
+           _selectedStatus != null ||
+           _startDate != null ||
+           _endDate != null;
   }
 
   void _showFilterModal() async {

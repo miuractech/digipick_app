@@ -4,6 +4,14 @@ import '../theme/app_theme.dart';
 import '../theme/app_components.dart';
 import '../services/auth_service.dart';
 
+enum FilterPeriod {
+  daily,
+  weekly, 
+  monthly,
+  yearly,
+  custom
+}
+
 class StatsPage extends StatefulWidget {
   final Map<String, dynamic>? device;
 
@@ -14,7 +22,8 @@ class StatsPage extends StatefulWidget {
 }
 
 class _StatsPageState extends State<StatsPage> {
-  bool isDaily = true; // Toggle between daily and monthly
+  FilterPeriod _selectedPeriod = FilterPeriod.daily;
+  DateTimeRange? _customDateRange;
   final AuthService _authService = AuthService();
   Map<String, dynamic>? _statisticsData;
   bool _isLoading = true;
@@ -49,35 +58,120 @@ class _StatsPageState extends State<StatsPage> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     
-    // Daily stats (last 7 days)
-    final dailyStats = <DateTime, int>{};
-    for (int i = 6; i >= 0; i--) {
-      final date = today.subtract(Duration(days: i));
-      dailyStats[date] = 0;
-    }
+    Map<DateTime, int> periodStats = {};
     
-    // Monthly stats (last 12 months)
-    final monthlyStats = <DateTime, int>{};
-    for (int i = 11; i >= 0; i--) {
-      final date = DateTime(now.year, now.month - i, 1);
-      monthlyStats[date] = 0;
+    // Generate date ranges based on selected period
+    switch (_selectedPeriod) {
+      case FilterPeriod.daily:
+        for (int i = 6; i >= 0; i--) {
+          final date = today.subtract(Duration(days: i));
+          periodStats[date] = 0;
+        }
+        break;
+        
+      case FilterPeriod.weekly:
+        // Last 8 weeks
+        for (int i = 7; i >= 0; i--) {
+          final date = today.subtract(Duration(days: i * 7));
+          final weekStart = date.subtract(Duration(days: date.weekday - 1));
+          periodStats[weekStart] = 0;
+        }
+        break;
+        
+      case FilterPeriod.monthly:
+        for (int i = 11; i >= 0; i--) {
+          final date = DateTime(now.year, now.month - i, 1);
+          periodStats[date] = 0;
+        }
+        break;
+        
+      case FilterPeriod.yearly:
+        // Last 5 years
+        for (int i = 4; i >= 0; i--) {
+          final date = DateTime(now.year - i, 1, 1);
+          periodStats[date] = 0;
+        }
+        break;
+        
+      case FilterPeriod.custom:
+        if (_customDateRange != null) {
+          final fromDate = DateTime(_customDateRange!.start.year, _customDateRange!.start.month, _customDateRange!.start.day);
+          final toDate = DateTime(_customDateRange!.end.year, _customDateRange!.end.month, _customDateRange!.end.day);
+          final diffDays = toDate.difference(fromDate).inDays;
+          
+          if (diffDays <= 31) {
+            // Show daily for ranges <= 31 days
+            for (int i = 0; i <= diffDays; i++) {
+              final date = fromDate.add(Duration(days: i));
+              periodStats[date] = 0;
+            }
+          } else if (diffDays <= 365) {
+            // Show weekly for ranges <= 1 year
+            DateTime currentDate = fromDate;
+            while (currentDate.isBefore(toDate) || currentDate.isAtSameMomentAs(toDate)) {
+              final weekStart = currentDate.subtract(Duration(days: currentDate.weekday - 1));
+              periodStats[weekStart] = 0;
+              currentDate = currentDate.add(const Duration(days: 7));
+            }
+          } else {
+            // Show monthly for longer ranges
+            DateTime currentDate = DateTime(fromDate.year, fromDate.month, 1);
+            final endDate = DateTime(toDate.year, toDate.month, 1);
+            while (currentDate.isBefore(endDate) || currentDate.isAtSameMomentAs(endDate)) {
+              periodStats[currentDate] = 0;
+              currentDate = DateTime(currentDate.year, currentDate.month + 1, 1);
+            }
+          }
+        }
+        break;
     }
     
     // Calculate actual test counts
     for (final test in tests) {
       if (test['test_date'] != null) {
         final testDate = DateTime.parse(test['test_date']);
-        final testDay = DateTime(testDate.year, testDate.month, testDate.day);
-        final testMonth = DateTime(testDate.year, testDate.month, 1);
+        DateTime periodKey;
         
-        // Daily count
-        if (dailyStats.containsKey(testDay)) {
-          dailyStats[testDay] = dailyStats[testDay]! + 1;
+        switch (_selectedPeriod) {
+          case FilterPeriod.daily:
+            periodKey = DateTime(testDate.year, testDate.month, testDate.day);
+            break;
+            
+          case FilterPeriod.weekly:
+            periodKey = testDate.subtract(Duration(days: testDate.weekday - 1));
+            periodKey = DateTime(periodKey.year, periodKey.month, periodKey.day);
+            break;
+            
+          case FilterPeriod.monthly:
+            periodKey = DateTime(testDate.year, testDate.month, 1);
+            break;
+            
+          case FilterPeriod.yearly:
+            periodKey = DateTime(testDate.year, 1, 1);
+            break;
+            
+          case FilterPeriod.custom:
+            if (_customDateRange != null) {
+              final fromDate = DateTime(_customDateRange!.start.year, _customDateRange!.start.month, _customDateRange!.start.day);
+              final toDate = DateTime(_customDateRange!.end.year, _customDateRange!.end.month, _customDateRange!.end.day);
+              final diffDays = toDate.difference(fromDate).inDays;
+              
+              if (diffDays <= 31) {
+                periodKey = DateTime(testDate.year, testDate.month, testDate.day);
+              } else if (diffDays <= 365) {
+                final weekStart = testDate.subtract(Duration(days: testDate.weekday - 1));
+                periodKey = DateTime(weekStart.year, weekStart.month, weekStart.day);
+              } else {
+                periodKey = DateTime(testDate.year, testDate.month, 1);
+              }
+            } else {
+              continue;
+            }
+            break;
         }
         
-        // Monthly count
-        if (monthlyStats.containsKey(testMonth)) {
-          monthlyStats[testMonth] = monthlyStats[testMonth]! + 1;
+        if (periodStats.containsKey(periodKey)) {
+          periodStats[periodKey] = periodStats[periodKey]! + 1;
         }
       }
     }
@@ -91,8 +185,7 @@ class _StatsPageState extends State<StatsPage> {
     final usagePercentage = totalTests > 0 ? (passedTests / totalTests * 100).round() : 0;
     
     return {
-      'dailyStats': dailyStats,
-      'monthlyStats': monthlyStats,
+      'periodStats': periodStats,
       'batteryLevel': batteryLevel,
       'totalTests': totalTests,
       'passedTests': passedTests,
@@ -434,20 +527,8 @@ class _StatsPageState extends State<StatsPage> {
         ),
         const SizedBox(height: 16),
         
-        // Daily/Monthly Toggle
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildToggleButton('Daily', isDaily),
-              _buildToggleButton('Monthly', !isDaily),
-            ],
-          ),
-        ),
+        // Filter Options
+        _buildFilterOptions(),
         const SizedBox(height: 24),
         
         // Line Chart
@@ -474,7 +555,7 @@ class _StatsPageState extends State<StatsPage> {
                   _buildLegendItem('Tests Count', AppColors.primaryAccent),
                   const SizedBox(width: 16),
                   Text(
-                    isDaily ? 'Last 7 Days' : 'Last 12 Months',
+                    _getPeriodDescription(),
                     style: AppTextStyles.bodyMedium.copyWith(
                       fontSize: 12,
                       color: AppColors.tertiaryText,
@@ -580,57 +661,98 @@ class _StatsPageState extends State<StatsPage> {
     );
   }
 
-  Widget _buildToggleButton(String text, bool isSelected) {
+  Widget _buildFilterOptions() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _buildFilterButton('Daily', FilterPeriod.daily),
+        _buildFilterButton('Weekly', FilterPeriod.weekly),
+        _buildFilterButton('Monthly', FilterPeriod.monthly),
+        _buildFilterButton('Yearly', FilterPeriod.yearly),
+        _buildFilterButton('Custom', FilterPeriod.custom),
+      ],
+    );
+  }
+
+  Widget _buildFilterButton(String text, FilterPeriod period) {
+    final isSelected = _selectedPeriod == period;
+    
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          isDaily = text == 'Daily';
-        });
+      onTap: () async {
+        if (period == FilterPeriod.custom) {
+          final picked = await showDateRangePicker(
+            context: context,
+            initialDateRange: _customDateRange,
+            firstDate: DateTime(2020),
+            lastDate: DateTime.now(),
+          );
+          if (picked != null) {
+            setState(() {
+              _selectedPeriod = period;
+              _customDateRange = picked;
+            });
+            _loadDeviceStatistics();
+          }
+        } else {
+          setState(() {
+            _selectedPeriod = period;
+            _customDateRange = null;
+          });
+          _loadDeviceStatistics();
+        }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryAccent : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          color: isSelected ? AppColors.primaryAccent : Colors.grey[200],
+          borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
           text,
           style: TextStyle(
             color: isSelected ? Colors.white : AppColors.tertiaryText,
             fontWeight: FontWeight.w600,
-            fontSize: 14,
+            fontSize: 13,
           ),
         ),
       ),
     );
   }
 
+  String _getPeriodDescription() {
+    switch (_selectedPeriod) {
+      case FilterPeriod.daily:
+        return 'Last 7 Days';
+      case FilterPeriod.weekly:
+        return 'Last 8 Weeks';
+      case FilterPeriod.monthly:
+        return 'Last 12 Months';
+      case FilterPeriod.yearly:
+        return 'Last 5 Years';
+      case FilterPeriod.custom:
+        if (_customDateRange != null) {
+          return 'Custom Range: ${_customDateRange!.start.day}/${_customDateRange!.start.month}/${_customDateRange!.start.year} - ${_customDateRange!.end.day}/${_customDateRange!.end.month}/${_customDateRange!.end.year}';
+        }
+        return 'Custom Range';
+    }
+  }
+
   List<FlSpot> _getChartData() {
     if (_statisticsData == null) return [];
     
-    if (isDaily) {
-      final dailyStats = _statisticsData!['dailyStats'] as Map<DateTime, int>;
-      final spots = <FlSpot>[];
-      int index = 0;
-      
-      dailyStats.entries.forEach((entry) {
-        spots.add(FlSpot(index.toDouble(), entry.value.toDouble()));
-        index++;
-      });
-      
-      return spots;
-    } else {
-      final monthlyStats = _statisticsData!['monthlyStats'] as Map<DateTime, int>;
-      final spots = <FlSpot>[];
-      int index = 0;
-      
-      monthlyStats.entries.forEach((entry) {
-        spots.add(FlSpot(index.toDouble(), entry.value.toDouble()));
-        index++;
-      });
-      
-      return spots;
+    final periodStats = _statisticsData!['periodStats'] as Map<DateTime, int>;
+    final spots = <FlSpot>[];
+    
+    // Sort dates and create spots
+    final sortedEntries = periodStats.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    
+    for (int i = 0; i < sortedEntries.length; i++) {
+      spots.add(FlSpot(i.toDouble(), sortedEntries[i].value.toDouble()));
     }
+    
+    return spots;
   }
 
   double _getMaxValue() {
@@ -644,26 +766,46 @@ class _StatsPageState extends State<StatsPage> {
   String _getBottomTitle(int value) {
     if (_statisticsData == null) return '';
     
-    if (isDaily) {
-      final dailyStats = _statisticsData!['dailyStats'] as Map<DateTime, int>;
-      final dates = dailyStats.keys.toList()..sort();
+    final periodStats = _statisticsData!['periodStats'] as Map<DateTime, int>;
+    final dates = periodStats.keys.toList()..sort();
+    
+    if (value >= 0 && value < dates.length) {
+      final date = dates[value];
       
-      if (value >= 0 && value < dates.length) {
-        final date = dates[value];
-        return '${date.day}/${date.month}';
+      switch (_selectedPeriod) {
+        case FilterPeriod.daily:
+          return '${date.day}/${date.month}';
+          
+        case FilterPeriod.weekly:
+          return '${date.day}/${date.month}';
+          
+        case FilterPeriod.monthly:
+          final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          return months[date.month - 1];
+          
+        case FilterPeriod.yearly:
+          return date.year.toString();
+          
+        case FilterPeriod.custom:
+          if (_customDateRange != null) {
+            final fromDate = DateTime(_customDateRange!.start.year, _customDateRange!.start.month, _customDateRange!.start.day);
+            final toDate = DateTime(_customDateRange!.end.year, _customDateRange!.end.month, _customDateRange!.end.day);
+            final diffDays = toDate.difference(fromDate).inDays;
+            
+            if (diffDays <= 31) {
+              return '${date.day}/${date.month}';
+            } else if (diffDays <= 365) {
+              return '${date.day}/${date.month}';
+            } else {
+              final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+              return months[date.month - 1];
+            }
+          }
+          return '${date.day}/${date.month}';
       }
-      return '';
-    } else {
-      final monthlyStats = _statisticsData!['monthlyStats'] as Map<DateTime, int>;
-      final dates = monthlyStats.keys.toList()..sort();
-      
-      if (value >= 0 && value < dates.length) {
-        final date = dates[value];
-        final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return months[date.month - 1];
-      }
-      return '';
     }
+    return '';
   }
 }
