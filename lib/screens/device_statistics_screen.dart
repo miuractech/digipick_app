@@ -5,6 +5,7 @@ import '../theme/service_request_components.dart';
 import '../services/device_service.dart';
 import '../services/service_request_service.dart';
 import '../models/service_request.dart';
+import 'service_request_screen.dart';
 
 class DeviceStatisticsScreen extends StatefulWidget {
   final String? statisticsType;
@@ -869,7 +870,12 @@ class _DeviceServicesListState extends State<DeviceServicesList> {
               child: AppComponents.primaryButton(
                 text: 'Request Service',
                 onPressed: () {
-                  Navigator.pushNamed(context, '/service-request');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ServiceRequestScreen(),
+                    ),
+                  );
                 },
               ),
             ),
@@ -996,7 +1002,12 @@ class _DeviceServicesListState extends State<DeviceServicesList> {
           AppComponents.primaryButton(
             text: 'Request Service',
             onPressed: () {
-              Navigator.pushNamed(context, '/service-request');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ServiceRequestScreen(),
+                ),
+              );
             },
           ),
           const SizedBox(height: 40),
@@ -1033,7 +1044,12 @@ class _DeviceServicesListState extends State<DeviceServicesList> {
           AppComponents.primaryButton(
             text: 'Request Service',
             onPressed: () {
-              Navigator.pushNamed(context, '/service-request');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ServiceRequestScreen(),
+                ),
+              );
             },
           ),
           const SizedBox(height: 40),
