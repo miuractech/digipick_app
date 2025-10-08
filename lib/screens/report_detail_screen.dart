@@ -186,6 +186,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Text(widget.report.pdfUrl ?? 'No PDF URL'),
                         _buildHeader(),
                         const SizedBox(height: 24),
                         _buildBasicInfo(),

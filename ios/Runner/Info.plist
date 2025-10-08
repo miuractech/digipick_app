@@ -60,11 +60,36 @@
 	<!-- Location permission (if needed for image metadata) -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>This app needs location access to tag photos with location</string>
+	<!-- Document directory access for file downloads -->
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>This app needs access to save PDF reports to your device</string>
+	<!-- Files and documents access -->
+	<key>NSAppleMusicUsageDescription</key>
+	<string>This app needs access to save PDF reports</string>
 	<!-- App Transport Security -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<!-- Support document types -->
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>PDF Document</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.adobe.pdf</string>
+			</array>
+		</dict>
+	</array>
+	<!-- Allow app to open PDF files -->
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>UIFileSharingEnabled</key>
+	<true/>
 </dict>
 </plist>

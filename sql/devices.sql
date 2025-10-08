@@ -7,6 +7,7 @@ create table public.devices (
   make text null,
   model text null,
   serial_number text null,
+  pdf_url text null,
   purchase_date date null,
   warranty_expiry_date date null,
   amc_start_date date null,
