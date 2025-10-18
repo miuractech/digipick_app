@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/device_test.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_components.dart';
 import '../services/download_service.dart';
+import '../services/auth_service.dart';
+import '../providers/auth_provider.dart';
 
 class ReportDetailScreen extends StatefulWidget {
   final DeviceTest report;
@@ -15,19 +18,48 @@ class ReportDetailScreen extends StatefulWidget {
 
 class _ReportDetailScreenState extends State<ReportDetailScreen> {
   late PageController _pageController;
+  final AuthService _authService = AuthService();
   int _currentImageIndex = 0;
   bool _isRefreshing = false;
+  late DeviceTest _currentReport;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
+    _currentReport = widget.report;
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  /// Fetches the latest report data from the server
+  Future<DeviceTest?> _fetchLatestReportData() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (authProvider.user == null) return null;
+
+      // Get all device tests for the user and find the one with matching ID
+      final allTests = await _authService.getDeviceTestsForUser(
+        userId: authProvider.user!.id,
+        limit: 1000, // Large limit to ensure we get all tests
+      );
+
+      // Find the test with matching ID
+      final matchingTest = allTests.where((test) => test['id'] == _currentReport.id).firstOrNull;
+      
+      if (matchingTest != null) {
+        return DeviceTest.fromJson(matchingTest);
+      }
+      
+      return null;
+    } catch (e) {
+      print('Error fetching latest report data: $e');
+      return null;
+    }
   }
 
   Future<void> _handleRefresh() async {
@@ -38,57 +70,62 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     });
 
     try {
-      // Simulate network delay for refresh
-      await Future.delayed(const Duration(milliseconds: 800));
+      // Fetch the latest report data from the server
+      final updatedReport = await _fetchLatestReportData();
       
-      // Clear image cache to force reload of images
-      final imageUrls = _getImageUrls();
-      for (String imageUrl in imageUrls) {
-        if (imageUrl.startsWith('http')) {
-          try {
-            // Clear network image cache
-            await precacheImage(NetworkImage(imageUrl), context);
-          } catch (e) {
-            // Ignore individual image cache errors
+      if (updatedReport != null) {
+        // Update the current report with fresh data
+        _currentReport = updatedReport;
+        
+        // Clear image cache to force reload of images
+        final imageUrls = _getImageUrls();
+        for (String imageUrl in imageUrls) {
+          if (imageUrl.startsWith('http')) {
+            try {
+              // Clear network image cache
+              await precacheImage(NetworkImage(imageUrl), context);
+            } catch (e) {
+              // Ignore individual image cache errors
+            }
           }
         }
-      }
-      
-      // Additional delay for smooth UX
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      // Here you would typically:
-      // 1. Call your API to refresh report data
-      // 2. Update the report object with new data
-      // 3. Refresh any cached images (done above)
-      
-      if (mounted) {
-        // Reset image carousel to first image with animation
-        _currentImageIndex = 0;
         
-        // Trigger a rebuild of the carousel widget
-        setState(() {});
-        
-        // Animate to first image if carousel is available
-        if (_pageController.hasClients && imageUrls.isNotEmpty) {
-          await _pageController.animateToPage(
-            0,
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeInOut,
+        if (mounted) {
+          // Reset image carousel to first image with animation
+          _currentImageIndex = 0;
+          
+          // Trigger a rebuild of the entire widget with new data
+          setState(() {});
+          
+          // Animate to first image if carousel is available
+          if (_pageController.hasClients && imageUrls.isNotEmpty) {
+            await _pageController.animateToPage(
+              0,
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeInOut,
+            );
+          }
+          
+          // Show success feedback
+          AppComponents.showSuccessSnackbar(
+            context,
+            'Report data refreshed successfully',
           );
         }
-        
-        // Show success feedback
-        AppComponents.showSuccessSnackbar(
-          context,
-          'Report data refreshed successfully',
-        );
+      } else {
+        // No updated data found
+        if (mounted) {
+          AppComponents.showErrorSnackbar(
+            context,
+            'No updated data found. Report may have been deleted.',
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         AppComponents.showErrorSnackbar(
           context,
-          'Failed to refresh report. Please try again.',
+          'Failed to refresh report. Please check your connection and try again.',
         );
       }
     } finally {
@@ -194,9 +231,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                         const SizedBox(height: 24),
                         _buildSampleReadings(),
                         const SizedBox(height: 24),
-                        _buildSampleSummary(),
-                        const SizedBox(height: 24),
                         _buildTestResults(),
+                        const SizedBox(height: 24),
+                        _buildSampleSummary(),
                         const SizedBox(height: 100), // Extra space for better pull-to-refresh experience
                       ],
                     ),
@@ -234,7 +271,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
   Widget _buildHeader() {
     return Text(
-      'Report ${widget.report.testDate != null ? "${widget.report.testDate!.day.toString().padLeft(2, '0')}/${widget.report.testDate!.month.toString().padLeft(2, '0')}/${widget.report.testDate!.year.toString().substring(2)}" : ""} - ${widget.report.id.substring(0, 3).toUpperCase()}',
+      'Report ${_currentReport.testDate != null ? "${_currentReport.testDate!.day.toString().padLeft(2, '0')}/${_currentReport.testDate!.month.toString().padLeft(2, '0')}/${_currentReport.testDate!.year.toString().substring(2)}" : ""} - ${_currentReport.id.substring(0, 3).toUpperCase()}',
       style: AppTextStyles.h1,
     );
   }
@@ -244,11 +281,11 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     return Column(
       children: [
         _buildInfoRow('Machine Detail', deviceName),
-        _buildInfoRow('Time', widget.report.testDate != null 
-          ? "${widget.report.testDate!.day.toString().padLeft(2, '0')}/${widget.report.testDate!.month.toString().padLeft(2, '0')}/${widget.report.testDate!.year.toString().substring(2)} - ${widget.report.testDate!.hour.toString().padLeft(2, '0')}.${widget.report.testDate!.minute.toString().padLeft(2, '0')}AM"
+        _buildInfoRow('Time', _currentReport.testDate != null 
+          ? "${_currentReport.testDate!.day.toString().padLeft(2, '0')}/${_currentReport.testDate!.month.toString().padLeft(2, '0')}/${_currentReport.testDate!.year.toString().substring(2)} - ${_currentReport.testDate!.hour.toString().padLeft(2, '0')}.${_currentReport.testDate!.minute.toString().padLeft(2, '0')}AM"
           : 'N/A'),
-        _buildInfoRow('Report ID', widget.report.id.substring(0, 12)),
-        _buildInfoRow('Batch ID', widget.report.folderName),
+        _buildInfoRow('Report ID', _currentReport.id.substring(0, 12)),
+        _buildInfoRow('Batch ID', _currentReport.folderName),
         _buildInfoRow('Test Gauge (LT)', '1 inch^2'),
         _buildInfoRow('Sample Type', _getSampleType()),
         _buildInfoRow('Test Material', 'Cotton'),
@@ -375,7 +412,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   }
 
   Widget _buildSampleReadings() {
-    final testResults = widget.report.testResults;
+    final testResults = _currentReport.testResults;
     if (testResults == null) return const SizedBox.shrink();
 
     final imageUrls = _getImageUrls();
@@ -400,9 +437,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           ),
           child: Column(
             children: [
-              _buildReadingRow('Warp Count(A):', '${currentReading['countA']} inch^2'),
-              _buildReadingRow('Weft Count(B):', '${currentReading['countB']} inch^2'),
-              _buildReadingRow('Total Count(A+B):', '${currentReading['totalCount']} inch^2'),
+              _buildReadingRow('Warp Count(A):', '${currentReading['countA']}'),
+              _buildReadingRow('Weft Count(B):', '${currentReading['countB']}'),
+              _buildReadingRow('Total Count(A+B):', '${currentReading['totalCount']}'),
             ],
           ),
         ),
@@ -442,25 +479,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   }
 
   Widget _buildSampleSummary() {
-    final testResults = widget.report.testResults;
+    final testResults = _currentReport.testResults;
     if (testResults == null) return const SizedBox.shrink();
     
     final allReadings = _getAllImageReadings();
-    
-    // Check if new format has sample summary with units
-    String warpUnit = '';
-    String weftUnit = '';
-    String totalUnit = '';
-    
-    if (testResults['sampleSummary'] != null) {
-      final sampleSummary = testResults['sampleSummary'] as List;
-      if (sampleSummary.isNotEmpty) {
-        final summary = sampleSummary[0] as Map<String, dynamic>;
-        warpUnit = _extractUnit(summary['warpA']?.toString() ?? '');
-        weftUnit = _extractUnit(summary['weftB']?.toString() ?? '');
-        totalUnit = _extractUnit(summary['totalAB']?.toString() ?? '');
-      }
-    }
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -523,19 +545,19 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   TableCell(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: Text('${reading['countA']}${warpUnit.isNotEmpty ? ' $warpUnit' : ''}'),
+                      child: Text('${reading['countA']}'),
                     ),
                   ),
                   TableCell(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: Text('${reading['countB']}${weftUnit.isNotEmpty ? ' $weftUnit' : ''}'),
+                      child: Text('${reading['countB']}'),
                     ),
                   ),
                   TableCell(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: Text('${reading['totalCount']}${totalUnit.isNotEmpty ? ' $totalUnit' : ''}'),
+                      child: Text('${reading['totalCount']}'),
                     ),
                   ),
                 ],
@@ -547,24 +569,16 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     );
   }
 
-  /// Helper method to extract unit from value strings like "56/inch"
-  String _extractUnit(String valueWithUnit) {
-    if (valueWithUnit.contains('/')) {
-      return valueWithUnit.split('/').length > 1 ? valueWithUnit.split('/')[1] : '';
-    }
-    return '';
-  }
-
   Widget _buildTestResults() {
-    final testResults = widget.report.testResults;
+    final testResults = _currentReport.testResults;
     if (testResults == null) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Test Results',
-          style: TextStyle(
+        Text(
+          'Test Results - Sample ${_currentImageIndex + 1}',
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.black,
@@ -598,7 +612,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   TableCell(
                     child: Padding(
                       padding: EdgeInsets.all(12),
-                      child: Text('Warp(B)', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text('Weft(B)', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
                   TableCell(
@@ -655,97 +669,148 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
   /// Gets the reading for the current image index
   Map<String, dynamic> _getCurrentImageReading() {
-    final testResults = widget.report.testResults;
-    
-    // Try new format first
+    final imageUrls = _getImageUrls();
+    if (_currentImageIndex < imageUrls.length) {
+      final currentImageUrl = imageUrls[_currentImageIndex];
+      
+      // Try to match based on filename first
+      final matchingReading = _getMatchingReading(currentImageUrl);
+      if (matchingReading != null) {
+        return {
+          'countA': _extractNumericValue(matchingReading['warp'] ?? '0'),
+          'countB': _extractNumericValue(matchingReading['weft'] ?? '0'),
+          'totalCount': _extractNumericValue(matchingReading['total'] ?? '0'),
+        };
+      }
+    }
+
+    final testResults = _currentReport.testResults;
     if (testResults != null && testResults['sampleReadings'] != null) {
       final sampleReadings = testResults['sampleReadings'] as List;
-      if (sampleReadings.isNotEmpty && sampleReadings[0] is List) {
-        final readings = sampleReadings[0] as List;
-        if (_currentImageIndex < readings.length) {
-          final reading = readings[_currentImageIndex] as Map<String, dynamic>;
-          // Extract numeric values from strings like "56/inch"
-          final warpStr = reading['warp']?.toString() ?? '0';
-          final weftStr = reading['weft']?.toString() ?? '0';
-          final totalStr = reading['total']?.toString() ?? '0';
-          
-          final warpValue = int.tryParse(warpStr.split('/')[0]) ?? 0;
-          final weftValue = int.tryParse(weftStr.split('/')[0]) ?? 0;
-          final totalValue = int.tryParse(totalStr.split('/')[0]) ?? 0;
-          
+      if (sampleReadings.isNotEmpty && _currentImageIndex < sampleReadings.length) {
+        final currentSampleGroup = sampleReadings[_currentImageIndex] as List;
+        if (currentSampleGroup.isNotEmpty) {
+          final reading = currentSampleGroup[0] as Map<String, dynamic>;
           return {
-            'countA': warpValue,
-            'countB': weftValue,
-            'totalCount': totalValue,
+            'countA': _extractNumericValue(reading['warp'] ?? '0'),
+            'countB': _extractNumericValue(reading['weft'] ?? '0'),
+            'totalCount': _extractNumericValue(reading['total'] ?? '0'),
           };
         }
       }
     }
     
-    // Fallback to old format
-    if (testResults != null && testResults['result'] != null) {
-      final results = testResults['result'] as List;
-      if (results.isNotEmpty && results[0] is List) {
-        final resultSet = results[0] as List;
-        if (_currentImageIndex < resultSet.length && resultSet[_currentImageIndex] is List) {
-          final currentResult = resultSet[_currentImageIndex] as List;
-          return {
-            'countA': currentResult.length > 0 ? currentResult[0] : 0,
-            'countB': currentResult.length > 1 ? currentResult[1] : 0,
-            'totalCount': currentResult.length > 2 ? currentResult[2] : 0,
-          };
-        }
+    // Fallback to sampleSummary if sampleReadings not available
+    if (testResults != null && testResults['sampleSummary'] != null) {
+      final sampleSummary = testResults['sampleSummary'] as List;
+      if (sampleSummary.isNotEmpty && _currentImageIndex < sampleSummary.length) {
+        final summary = sampleSummary[_currentImageIndex] as Map<String, dynamic>;
+        return {
+          'countA': _extractNumericValue(summary['warpA'] ?? '0'),
+          'countB': _extractNumericValue(summary['weftB'] ?? '0'),
+          'totalCount': _extractNumericValue(summary['totalAB'] ?? '0'),
+        };
       }
     }
     
     return {'countA': 0, 'countB': 0, 'totalCount': 0};
   }
 
-  /// Gets all readings for the sample summary table
-  List<Map<String, dynamic>> _getAllImageReadings() {
-    final testResults = widget.report.testResults;
-    final List<Map<String, dynamic>> allReadings = [];
-    
-    // Try new format first
-    if (testResults != null && testResults['sampleReadings'] != null) {
-      final sampleReadings = testResults['sampleReadings'] as List;
-      if (sampleReadings.isNotEmpty && sampleReadings[0] is List) {
-        final readings = sampleReadings[0] as List;
-        for (int i = 0; i < readings.length; i++) {
-          final reading = readings[i] as Map<String, dynamic>;
-          // Extract numeric values from strings like "56/inch"
-          final warpStr = reading['warp']?.toString() ?? '0';
-          final weftStr = reading['weft']?.toString() ?? '0';
-          final totalStr = reading['total']?.toString() ?? '0';
-          
-          final warpValue = int.tryParse(warpStr.split('/')[0]) ?? 0;
-          final weftValue = int.tryParse(weftStr.split('/')[0]) ?? 0;
-          final totalValue = int.tryParse(totalStr.split('/')[0]) ?? 0;
-          
-          allReadings.add({
-            'index': i,
-            'countA': warpValue,
-            'countB': weftValue,
-            'totalCount': totalValue,
-          });
+  /// Helper method to extract numeric value from string with units
+  int _extractNumericValue(dynamic value) {
+    if (value is int) return value;
+    if (value is double) return value.round();
+    if (value is String) {
+      // Extract numeric part from strings like "56/inch" or "127/inch²"
+      final match = RegExp(r'(\d+)').firstMatch(value);
+      return match != null ? int.tryParse(match.group(1)!) ?? 0 : 0;
+    }
+    return 0;
+  }
+
+  /// Helper method to extract filename from full path or URL
+  String _extractFilename(String path) {
+    return path.split('/').last;
+  }
+
+  /// Helper method to match image URL with sample reading based on filename
+  Map<String, dynamic>? _getMatchingReading(String imageUrl) {
+    final testResults = _currentReport.testResults;
+    if (testResults == null || testResults['sampleReadings'] == null) return null;
+
+    final imageFilename = _extractFilename(imageUrl);
+    final sampleReadings = testResults['sampleReadings'] as List;
+
+    // Search through all sample readings for matching filename
+    for (var readingGroup in sampleReadings) {
+      if (readingGroup is List) {
+        for (var reading in readingGroup) {
+          if (reading is Map<String, dynamic> && reading['img'] != null) {
+            final readingFilename = _extractFilename(reading['img']);
+            if (readingFilename == imageFilename) {
+              return reading;
+            }
+          }
         }
       }
     }
-    // Fallback to old format
-    else if (testResults != null && testResults['result'] != null) {
-      final results = testResults['result'] as List;
-      if (results.isNotEmpty && results[0] is List) {
-        final resultSet = results[0] as List;
-        for (int i = 0; i < resultSet.length; i++) {
-          if (resultSet[i] is List) {
-            final result = resultSet[i] as List;
-            allReadings.add({
-              'index': i,
-              'countA': result.length > 0 ? result[0] : 0,
-              'countB': result.length > 1 ? result[1] : 0,
-              'totalCount': result.length > 2 ? result[2] : 0,
-            });
-          }
+
+    return null;
+  }
+
+  /// Gets all readings for the sample summary table
+  List<Map<String, dynamic>> _getAllImageReadings() {
+    final testResults = _currentReport.testResults;
+    final List<Map<String, dynamic>> allReadings = [];
+    final imageUrls = _getImageUrls();
+    
+    // Prioritize sampleSummary as requested by user
+    if (testResults != null && testResults['sampleSummary'] != null) {
+      final sampleSummary = testResults['sampleSummary'] as List;
+      for (int i = 0; i < sampleSummary.length; i++) {
+        final summary = sampleSummary[i] as Map<String, dynamic>;
+        allReadings.add({
+          'index': i,
+          'countA': _extractNumericValue(summary['warpA'] ?? '0'),
+          'countB': _extractNumericValue(summary['weftB'] ?? '0'),
+          'totalCount': _extractNumericValue(summary['totalAB'] ?? '0'),
+        });
+      }
+      return allReadings;
+    }
+
+    // Fallback: Try to match images with sampleReadings based on filename
+    if (testResults != null && testResults['sampleReadings'] != null && imageUrls.isNotEmpty) {
+      for (int i = 0; i < imageUrls.length; i++) {
+        final imageUrl = imageUrls[i];
+        final matchingReading = _getMatchingReading(imageUrl);
+        
+        if (matchingReading != null) {
+          allReadings.add({
+            'index': i,
+            'countA': _extractNumericValue(matchingReading['warp'] ?? '0'),
+            'countB': _extractNumericValue(matchingReading['weft'] ?? '0'),
+            'totalCount': _extractNumericValue(matchingReading['total'] ?? '0'),
+          });
+        }
+      }
+      
+      if (allReadings.isNotEmpty) return allReadings;
+    }
+
+    // Final fallback: Use sampleReadings by index
+    if (testResults != null && testResults['sampleReadings'] != null) {
+      final sampleReadings = testResults['sampleReadings'] as List;
+      for (int i = 0; i < sampleReadings.length; i++) {
+        final readingGroup = sampleReadings[i] as List;
+        if (readingGroup.isNotEmpty) {
+          final reading = readingGroup[0] as Map<String, dynamic>;
+          allReadings.add({
+            'index': i,
+            'countA': _extractNumericValue(reading['warp'] ?? '0'),
+            'countB': _extractNumericValue(reading['weft'] ?? '0'),
+            'totalCount': _extractNumericValue(reading['total'] ?? '0'),
+          });
         }
       }
     }
@@ -754,34 +819,32 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   }
 
   String _getDeviceName() {
-    if (widget.report.metadata != null && widget.report.metadata!['device_name'] != null) {
-      return widget.report.metadata!['device_name'];
+    if (_currentReport.metadata != null && _currentReport.metadata!['device_name'] != null) {
+      return _currentReport.metadata!['device_name'];
     }
-    return widget.report.deviceName ?? 'N/A';
+    return _currentReport.deviceName ?? 'N/A';
   }
 
   List<String> _getImageUrls() {
-    if (widget.report.metadata != null && widget.report.metadata!['image_urls'] != null) {
-      return List<String>.from(widget.report.metadata!['image_urls']);
+    if (_currentReport.metadata != null && _currentReport.metadata!['image_urls'] != null) {
+      return List<String>.from(_currentReport.metadata!['image_urls']);
     }
-    return widget.report.images;
+    return _currentReport.images;
   }
 
   String _getSampleType() {
     return 'Natural White (600 DNR)';
   }
 
-  /// Helper method to extract values from new testResults format
-  Map<String, String> _getTestResultValues(String resultType) {
-    final testResults = widget.report.testResults;
-    
-    // Try new format first
+
+  Map<String, String> _getMeanValues() {
+    final testResults = _currentReport.testResults;
     if (testResults != null && testResults['testResults'] != null) {
-      final testResultsArray = testResults['testResults'] as List;
-      if (testResultsArray.isNotEmpty && testResultsArray[0] is List) {
-        final results = testResultsArray[0] as List;
-        for (var result in results) {
-          if (result is Map<String, dynamic> && result['type'] == resultType) {
+      final results = testResults['testResults'] as List;
+      if (results.isNotEmpty && _currentImageIndex < results.length && results[_currentImageIndex] is List) {
+        final currentGroup = results[_currentImageIndex] as List;
+        for (var result in currentGroup) {
+          if (result is Map<String, dynamic> && result['type'] == 'Mean') {
             return {
               'warpA': '${result['warpA'] ?? 0}',
               'warpB': '${result['weftB'] ?? 0}',
@@ -791,148 +854,104 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         }
       }
     }
-    
     return {'warpA': '0', 'warpB': '0', 'total': '0'};
   }
 
-
-  Map<String, String> _getMeanValues() {
-    // Try new format first
-    final newValues = _getTestResultValues('Mean');
-    if (newValues['warpA'] != '0' || newValues['warpB'] != '0' || newValues['total'] != '0') {
-      return {
-        'warpA': '${newValues['warpA']} inch²',
-        'warpB': '${newValues['warpB']} inch',
-        'total': '${newValues['total']} inch',
-      };
-    }
-    
-    // Fallback to old format
-    final testResults = widget.report.testResults;
-    if (testResults != null && testResults['mean'] != null) {
-      final mean = testResults['mean'] as List;
-      if (mean.isNotEmpty && mean[0] is List) {
-        final values = mean[0] as List;
-        return {
-          'warpA': values.length > 0 ? '${values[0]} inch²' : '64 inch²',
-          'warpB': values.length > 1 ? '${values[1]} inch' : '112 inch',
-          'total': values.length > 2 ? '${values[2]} inch' : '176 inch',
-        };
-      }
-    }
-    return {'warpA': '64 inch²', 'warpB': '112 inch', 'total': '176 inch'};
-  }
-
   Map<String, String> _getStdDeviationValues() {
-    // Try new format first
-    final newValues = _getTestResultValues('Standard Deviation');
-    if (newValues['warpA'] != '0' || newValues['warpB'] != '0' || newValues['total'] != '0') {
-      return newValues;
-    }
-    
-    // Fallback to old format
-    final testResults = widget.report.testResults;
-    if (testResults != null && testResults['standard deviation'] != null) {
-      final stdDev = testResults['standard deviation'] as List;
-      if (stdDev.isNotEmpty && stdDev[0] is List) {
-        final values = stdDev[0] as List;
-        return {
-          'warpA': values.length > 0 ? '${values[0]}' : '0',
-          'warpB': values.length > 1 ? '${values[1]}' : '0',
-          'total': values.length > 2 ? '${values[2]}' : '0',
-        };
+    final testResults = _currentReport.testResults;
+    if (testResults != null && testResults['testResults'] != null) {
+      final results = testResults['testResults'] as List;
+      if (results.isNotEmpty && _currentImageIndex < results.length && results[_currentImageIndex] is List) {
+        final currentGroup = results[_currentImageIndex] as List;
+        for (var result in currentGroup) {
+          if (result is Map<String, dynamic> && result['type'] == 'Standard Deviation') {
+            return {
+              'warpA': '${result['warpA'] ?? 0}',
+              'warpB': '${result['weftB'] ?? 0}',
+              'total': '${result['totalAB'] ?? 0}',
+            };
+          }
+        }
       }
     }
     return {'warpA': '0', 'warpB': '0', 'total': '0'};
   }
 
   Map<String, String> _getCoeffVariationValues() {
-    // Try new format first
-    final newValues = _getTestResultValues('Coefficient of Variation');
-    if (newValues['warpA'] != '0' || newValues['warpB'] != '0' || newValues['total'] != '0') {
-      return newValues;
-    }
-    
-    // Fallback to old format (which incorrectly used 'variance')
-    final testResults = widget.report.testResults;
-    if (testResults != null && testResults['variance'] != null) {
-      final variance = testResults['variance'] as List;
-      if (variance.isNotEmpty && variance[0] is List) {
-        final values = variance[0] as List;
-        return {
-          'warpA': values.length > 0 ? '${values[0]}' : '0',
-          'warpB': values.length > 1 ? '${values[1]}' : '0',
-          'total': values.length > 2 ? '${values[2]}' : '0',
-        };
+    final testResults = _currentReport.testResults;
+    if (testResults != null && testResults['testResults'] != null) {
+      final results = testResults['testResults'] as List;
+      if (results.isNotEmpty && _currentImageIndex < results.length && results[_currentImageIndex] is List) {
+        final currentGroup = results[_currentImageIndex] as List;
+        for (var result in currentGroup) {
+          if (result is Map<String, dynamic> && result['type'] == 'Coefficient of Variation') {
+            return {
+              'warpA': '${result['warpA'] ?? 0}',
+              'warpB': '${result['weftB'] ?? 0}',
+              'total': '${result['totalAB'] ?? 0}',
+            };
+          }
+        }
       }
     }
     return {'warpA': '0', 'warpB': '0', 'total': '0'};
   }
 
   Map<String, String> _getMinValues() {
-    // Try new format first
-    final newValues = _getTestResultValues('Minimum');
-    if (newValues['warpA'] != '0' || newValues['warpB'] != '0' || newValues['total'] != '0') {
-      return newValues;
-    }
-    
-    // Fallback to old format
-    final testResults = widget.report.testResults;
-    if (testResults != null && testResults['min'] != null) {
-      final min = testResults['min'] as List;
-      if (min.isNotEmpty && min[0] is List) {
-        final values = min[0] as List;
-        return {
-          'warpA': values.length > 0 ? '${values[0]}' : '64',
-          'warpB': values.length > 1 ? '${values[1]}' : '112',
-          'total': values.length > 2 ? '${values[2]}' : '176',
-        };
+    final testResults = _currentReport.testResults;
+    if (testResults != null && testResults['testResults'] != null) {
+      final results = testResults['testResults'] as List;
+      if (results.isNotEmpty && _currentImageIndex < results.length && results[_currentImageIndex] is List) {
+        final currentGroup = results[_currentImageIndex] as List;
+        for (var result in currentGroup) {
+          if (result is Map<String, dynamic> && result['type'] == 'Minimum') {
+            return {
+              'warpA': '${result['warpA'] ?? 0}',
+              'warpB': '${result['weftB'] ?? 0}',
+              'total': '${result['totalAB'] ?? 0}',
+            };
+          }
+        }
       }
     }
-    return {'warpA': '64', 'warpB': '112', 'total': '176'};
+    return {'warpA': '0', 'warpB': '0', 'total': '0'};
   }
 
   Map<String, String> _getMaxValues() {
-    // Try new format first
-    final newValues = _getTestResultValues('Maximum');
-    if (newValues['warpA'] != '0' || newValues['warpB'] != '0' || newValues['total'] != '0') {
-      return newValues;
-    }
-    
-    // Fallback to old format
-    final testResults = widget.report.testResults;
-    if (testResults != null && testResults['max'] != null) {
-      final max = testResults['max'] as List;
-      if (max.isNotEmpty && max[0] is List) {
-        final values = max[0] as List;
-        return {
-          'warpA': values.length > 0 ? '${values[0]}' : '64',
-          'warpB': values.length > 1 ? '${values[1]}' : '112',
-          'total': values.length > 2 ? '${values[2]}' : '176',
-        };
+    final testResults = _currentReport.testResults;
+    if (testResults != null && testResults['testResults'] != null) {
+      final results = testResults['testResults'] as List;
+      if (results.isNotEmpty && _currentImageIndex < results.length && results[_currentImageIndex] is List) {
+        final currentGroup = results[_currentImageIndex] as List;
+        for (var result in currentGroup) {
+          if (result is Map<String, dynamic> && result['type'] == 'Maximum') {
+            return {
+              'warpA': '${result['warpA'] ?? 0}',
+              'warpB': '${result['weftB'] ?? 0}',
+              'total': '${result['totalAB'] ?? 0}',
+            };
+          }
+        }
       }
     }
-    return {'warpA': '64', 'warpB': '112', 'total': '176'};
+    return {'warpA': '0', 'warpB': '0', 'total': '0'};
   }
 
   Map<String, String> _getRangeValues() {
-    // Try new format first
-    final newValues = _getTestResultValues('Range');
-    if (newValues['warpA'] != '0' || newValues['warpB'] != '0' || newValues['total'] != '0') {
-      return newValues;
-    }
-    
-    // Fallback to old format
-    final testResults = widget.report.testResults;
-    if (testResults != null && testResults['range'] != null) {
-      final range = testResults['range'] as List;
-      if (range.isNotEmpty && range[0] is List) {
-        final values = range[0] as List;
-        return {
-          'warpA': values.length > 0 ? '${values[0]}' : '0',
-          'warpB': values.length > 1 ? '${values[1]}' : '0',
-          'total': values.length > 2 ? '${values[2]}' : '0',
-        };
+    final testResults = _currentReport.testResults;
+    if (testResults != null && testResults['testResults'] != null) {
+      final results = testResults['testResults'] as List;
+      if (results.isNotEmpty && _currentImageIndex < results.length && results[_currentImageIndex] is List) {
+        final currentGroup = results[_currentImageIndex] as List;
+        for (var result in currentGroup) {
+          if (result is Map<String, dynamic> && result['type'] == 'Range') {
+            return {
+              'warpA': '${result['warpA'] ?? 0}',
+              'warpB': '${result['weftB'] ?? 0}',
+              'total': '${result['totalAB'] ?? 0}',
+            };
+          }
+        }
       }
     }
     return {'warpA': '0', 'warpB': '0', 'total': '0'};
@@ -940,12 +959,12 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
   /// Checks if PDF is available for this report
   bool _isPdfAvailable() {
-    return widget.report.pdfUrl != null && widget.report.pdfUrl!.isNotEmpty;
+    return _currentReport.pdfUrl != null && _currentReport.pdfUrl!.isNotEmpty;
   }
 
   /// Downloads the PDF report for this device test
   Future<void> _downloadPdf(BuildContext context) async {
-    final pdfUrl = widget.report.pdfUrl;
+    final pdfUrl = _currentReport.pdfUrl;
     
     if (pdfUrl == null || pdfUrl.isEmpty) {
       AppComponents.showErrorSnackbar(
@@ -956,12 +975,12 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     }
 
     // Generate a meaningful filename
-    final timestamp = widget.report.testDate != null 
-        ? "${widget.report.testDate!.day.toString().padLeft(2, '0')}-${widget.report.testDate!.month.toString().padLeft(2, '0')}-${widget.report.testDate!.year}"
+    final timestamp = _currentReport.testDate != null 
+        ? "${_currentReport.testDate!.day.toString().padLeft(2, '0')}-${_currentReport.testDate!.month.toString().padLeft(2, '0')}-${_currentReport.testDate!.year}"
         : DateTime.now().toString().substring(0, 10);
     
     final deviceName = _getDeviceName().replaceAll(' ', '_').toLowerCase();
-    final fileName = 'Report_${deviceName}_${timestamp}_${widget.report.id.substring(0, 8)}';
+    final fileName = 'Report_${deviceName}_${timestamp}_${_currentReport.id.substring(0, 8)}';
 
     // Download the PDF
     await DownloadService.downloadPdf(
