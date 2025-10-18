@@ -186,7 +186,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(widget.report.pdfUrl ?? 'No PDF URL'),
                         _buildHeader(),
                         const SizedBox(height: 24),
                         _buildBasicInfo(),
@@ -448,6 +447,21 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     
     final allReadings = _getAllImageReadings();
     
+    // Check if new format has sample summary with units
+    String warpUnit = '';
+    String weftUnit = '';
+    String totalUnit = '';
+    
+    if (testResults['sampleSummary'] != null) {
+      final sampleSummary = testResults['sampleSummary'] as List;
+      if (sampleSummary.isNotEmpty) {
+        final summary = sampleSummary[0] as Map<String, dynamic>;
+        warpUnit = _extractUnit(summary['warpA']?.toString() ?? '');
+        weftUnit = _extractUnit(summary['weftB']?.toString() ?? '');
+        totalUnit = _extractUnit(summary['totalAB']?.toString() ?? '');
+      }
+    }
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -487,7 +501,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   TableCell(
                     child: Padding(
                       padding: EdgeInsets.all(12),
-                      child: Text('Warp(B)', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text('Weft(B)', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
                   TableCell(
@@ -509,19 +523,19 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   TableCell(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: Text('${reading['countA']}'),
+                      child: Text('${reading['countA']}${warpUnit.isNotEmpty ? ' $warpUnit' : ''}'),
                     ),
                   ),
                   TableCell(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: Text('${reading['countB']}'),
+                      child: Text('${reading['countB']}${weftUnit.isNotEmpty ? ' $weftUnit' : ''}'),
                     ),
                   ),
                   TableCell(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: Text('${reading['totalCount']}'),
+                      child: Text('${reading['totalCount']}${totalUnit.isNotEmpty ? ' $totalUnit' : ''}'),
                     ),
                   ),
                 ],
@@ -531,6 +545,14 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         ),
       ],
     );
+  }
+
+  /// Helper method to extract unit from value strings like "56/inch"
+  String _extractUnit(String valueWithUnit) {
+    if (valueWithUnit.contains('/')) {
+      return valueWithUnit.split('/').length > 1 ? valueWithUnit.split('/')[1] : '';
+    }
+    return '';
   }
 
   Widget _buildTestResults() {
@@ -634,6 +656,33 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   /// Gets the reading for the current image index
   Map<String, dynamic> _getCurrentImageReading() {
     final testResults = widget.report.testResults;
+    
+    // Try new format first
+    if (testResults != null && testResults['sampleReadings'] != null) {
+      final sampleReadings = testResults['sampleReadings'] as List;
+      if (sampleReadings.isNotEmpty && sampleReadings[0] is List) {
+        final readings = sampleReadings[0] as List;
+        if (_currentImageIndex < readings.length) {
+          final reading = readings[_currentImageIndex] as Map<String, dynamic>;
+          // Extract numeric values from strings like "56/inch"
+          final warpStr = reading['warp']?.toString() ?? '0';
+          final weftStr = reading['weft']?.toString() ?? '0';
+          final totalStr = reading['total']?.toString() ?? '0';
+          
+          final warpValue = int.tryParse(warpStr.split('/')[0]) ?? 0;
+          final weftValue = int.tryParse(weftStr.split('/')[0]) ?? 0;
+          final totalValue = int.tryParse(totalStr.split('/')[0]) ?? 0;
+          
+          return {
+            'countA': warpValue,
+            'countB': weftValue,
+            'totalCount': totalValue,
+          };
+        }
+      }
+    }
+    
+    // Fallback to old format
     if (testResults != null && testResults['result'] != null) {
       final results = testResults['result'] as List;
       if (results.isNotEmpty && results[0] is List) {
@@ -648,6 +697,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         }
       }
     }
+    
     return {'countA': 0, 'countB': 0, 'totalCount': 0};
   }
 
@@ -656,7 +706,33 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     final testResults = widget.report.testResults;
     final List<Map<String, dynamic>> allReadings = [];
     
-    if (testResults != null && testResults['result'] != null) {
+    // Try new format first
+    if (testResults != null && testResults['sampleReadings'] != null) {
+      final sampleReadings = testResults['sampleReadings'] as List;
+      if (sampleReadings.isNotEmpty && sampleReadings[0] is List) {
+        final readings = sampleReadings[0] as List;
+        for (int i = 0; i < readings.length; i++) {
+          final reading = readings[i] as Map<String, dynamic>;
+          // Extract numeric values from strings like "56/inch"
+          final warpStr = reading['warp']?.toString() ?? '0';
+          final weftStr = reading['weft']?.toString() ?? '0';
+          final totalStr = reading['total']?.toString() ?? '0';
+          
+          final warpValue = int.tryParse(warpStr.split('/')[0]) ?? 0;
+          final weftValue = int.tryParse(weftStr.split('/')[0]) ?? 0;
+          final totalValue = int.tryParse(totalStr.split('/')[0]) ?? 0;
+          
+          allReadings.add({
+            'index': i,
+            'countA': warpValue,
+            'countB': weftValue,
+            'totalCount': totalValue,
+          });
+        }
+      }
+    }
+    // Fallback to old format
+    else if (testResults != null && testResults['result'] != null) {
       final results = testResults['result'] as List;
       if (results.isNotEmpty && results[0] is List) {
         final resultSet = results[0] as List;
@@ -695,24 +771,66 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     return 'Natural White (600 DNR)';
   }
 
+  /// Helper method to extract values from new testResults format
+  Map<String, String> _getTestResultValues(String resultType) {
+    final testResults = widget.report.testResults;
+    
+    // Try new format first
+    if (testResults != null && testResults['testResults'] != null) {
+      final testResultsArray = testResults['testResults'] as List;
+      if (testResultsArray.isNotEmpty && testResultsArray[0] is List) {
+        final results = testResultsArray[0] as List;
+        for (var result in results) {
+          if (result is Map<String, dynamic> && result['type'] == resultType) {
+            return {
+              'warpA': '${result['warpA'] ?? 0}',
+              'warpB': '${result['weftB'] ?? 0}',
+              'total': '${result['totalAB'] ?? 0}',
+            };
+          }
+        }
+      }
+    }
+    
+    return {'warpA': '0', 'warpB': '0', 'total': '0'};
+  }
+
 
   Map<String, String> _getMeanValues() {
+    // Try new format first
+    final newValues = _getTestResultValues('Mean');
+    if (newValues['warpA'] != '0' || newValues['warpB'] != '0' || newValues['total'] != '0') {
+      return {
+        'warpA': '${newValues['warpA']} inch²',
+        'warpB': '${newValues['warpB']} inch',
+        'total': '${newValues['total']} inch',
+      };
+    }
+    
+    // Fallback to old format
     final testResults = widget.report.testResults;
     if (testResults != null && testResults['mean'] != null) {
       final mean = testResults['mean'] as List;
       if (mean.isNotEmpty && mean[0] is List) {
         final values = mean[0] as List;
         return {
-          'warpA': values.length > 0 ? '${values[0]} inch2' : '64 inch2',
+          'warpA': values.length > 0 ? '${values[0]} inch²' : '64 inch²',
           'warpB': values.length > 1 ? '${values[1]} inch' : '112 inch',
           'total': values.length > 2 ? '${values[2]} inch' : '176 inch',
         };
       }
     }
-    return {'warpA': '64 inch2', 'warpB': '112 inch', 'total': '176 inch'};
+    return {'warpA': '64 inch²', 'warpB': '112 inch', 'total': '176 inch'};
   }
 
   Map<String, String> _getStdDeviationValues() {
+    // Try new format first
+    final newValues = _getTestResultValues('Standard Deviation');
+    if (newValues['warpA'] != '0' || newValues['warpB'] != '0' || newValues['total'] != '0') {
+      return newValues;
+    }
+    
+    // Fallback to old format
     final testResults = widget.report.testResults;
     if (testResults != null && testResults['standard deviation'] != null) {
       final stdDev = testResults['standard deviation'] as List;
@@ -729,6 +847,13 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   }
 
   Map<String, String> _getCoeffVariationValues() {
+    // Try new format first
+    final newValues = _getTestResultValues('Coefficient of Variation');
+    if (newValues['warpA'] != '0' || newValues['warpB'] != '0' || newValues['total'] != '0') {
+      return newValues;
+    }
+    
+    // Fallback to old format (which incorrectly used 'variance')
     final testResults = widget.report.testResults;
     if (testResults != null && testResults['variance'] != null) {
       final variance = testResults['variance'] as List;
@@ -745,6 +870,13 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   }
 
   Map<String, String> _getMinValues() {
+    // Try new format first
+    final newValues = _getTestResultValues('Minimum');
+    if (newValues['warpA'] != '0' || newValues['warpB'] != '0' || newValues['total'] != '0') {
+      return newValues;
+    }
+    
+    // Fallback to old format
     final testResults = widget.report.testResults;
     if (testResults != null && testResults['min'] != null) {
       final min = testResults['min'] as List;
@@ -761,6 +893,13 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   }
 
   Map<String, String> _getMaxValues() {
+    // Try new format first
+    final newValues = _getTestResultValues('Maximum');
+    if (newValues['warpA'] != '0' || newValues['warpB'] != '0' || newValues['total'] != '0') {
+      return newValues;
+    }
+    
+    // Fallback to old format
     final testResults = widget.report.testResults;
     if (testResults != null && testResults['max'] != null) {
       final max = testResults['max'] as List;
@@ -777,6 +916,13 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   }
 
   Map<String, String> _getRangeValues() {
+    // Try new format first
+    final newValues = _getTestResultValues('Range');
+    if (newValues['warpA'] != '0' || newValues['warpB'] != '0' || newValues['total'] != '0') {
+      return newValues;
+    }
+    
+    // Fallback to old format
     final testResults = widget.report.testResults;
     if (testResults != null && testResults['range'] != null) {
       final range = testResults['range'] as List;
