@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 /// App Theme Configuration
 /// 
-/// This file contains the comprehensive theme configuration for the ImagePick app.
+/// This file contains the comprehensive theme configuration for the QCVATION app.
 /// It follows the design system guide and ensures consistent styling across the app.
 class AppTheme {
   // Prevent instantiation

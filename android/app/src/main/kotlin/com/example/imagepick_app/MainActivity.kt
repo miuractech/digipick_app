@@ -1,4 +1,4 @@
-package com.example.imagepick_app
+package com.example.qcvation
 
 import io.flutter.embedding.android.FlutterActivity
 

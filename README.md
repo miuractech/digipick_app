@@ -1,6 +1,6 @@
-# imagepick_app
+# QCVATION
 
-A new Flutter project.
+QCVATION - Image picking and processing app.
 
 ## Getting Started
 

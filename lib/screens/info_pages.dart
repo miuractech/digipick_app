@@ -9,10 +9,10 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _InfoPageScaffold(
-      title: 'Welcome to Imagepick',
+      title: 'Welcome to QCVATION',
       icon: Icons.waving_hand,
       child:         Text(
-        'Welcome to Imagepick - your comprehensive image processing solution.\n\n'
+        'Welcome to QCVATION - your comprehensive image processing solution.\n\n'
         'We\'re excited to have you on board and look forward to helping you achieve your imaging goals.\n\n'
         'Our platform provides powerful tools for image management, processing, and analysis that will streamline your workflow and enhance your productivity.',
         style: AppTextStyles.bodyLarge.copyWith(

@@ -1,5 +1,5 @@
-name: imagepick
-description: "IMAGEPICK - Image picking and processing app."
+name: qcvation
+description: "QCVATION - Image picking and processing app."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

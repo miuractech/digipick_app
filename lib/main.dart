@@ -42,7 +42,7 @@ class MyApp extends StatelessWidget {
         return ChangeNotifierProvider(
           create: (context) => AuthProvider(),
           child: MaterialApp(
-            title: 'IMAGEPICK',
+            title: 'QCVATION',
             theme: AppTheme.lightTheme,
             home: const PreloaderScreen(),
             routes: {
